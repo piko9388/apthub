@@ -1,0 +1,22 @@
+{
+  "primary_region": "서울 강서구",
+  "units": [
+    {"name": "등촌주공3단지", "region": "강서구 등촌동", "est_price_59_eok": 11.6, "tier": 1, "status": "보류·관찰", "notes": "1994 구축, 정비(재건축)·고도제한 완화, 9호선 급행, CJ부지(스타필드) 호재. 현 자금 천장 초과.", "aliases": ["등촌주공3", "등촌주공 3단지"]},
+    {"name": "등촌주공5단지", "region": "강서구 등촌동", "est_price_59_eok": 11.0, "tier": 1, "status": "관찰", "notes": "등촌주공3과 동일 호재권. 천장 초과.", "aliases": ["등촌주공5", "등촌주공 5단지"]},
+    {"name": "가양", "region": "강서구 가양동", "est_price_59_eok": 10.0, "tier": 1, "status": "관심", "notes": "CJ제일제당 부지 개발(스타필드)·9호선. 대단지.", "aliases": ["가양동", "가양역"]},
+    {"name": "발산", "region": "강서구 내발산동", "est_price_59_eok": 9.5, "tier": 1, "status": "관심", "notes": "5호선·마곡 인접, 정훈 통근 양호.", "aliases": ["발산역", "내발산동", "우장산아이파크"]},
+    {"name": "염창", "region": "강서구 염창동", "est_price_59_eok": 10.0, "tier": 1, "status": "관심", "notes": "9호선 염창역, 여의도 최단.", "aliases": ["염창동", "염창역"]},
+    {"name": "우장산", "region": "강서구 화곡동", "est_price_59_eok": 9.5, "tier": 1, "status": "관심", "notes": "5호선, 학군·주거 안정.", "aliases": ["우장산역", "화곡동"]},
+    {"name": "대방", "region": "동작구 대방동", "est_price_59_eok": 11.0, "tier": 2, "status": "관심", "notes": "5호선 여의도+올림픽대로+보라매공원. 통근 균형.", "aliases": ["대방동", "대방역"]},
+    {"name": "보라매", "region": "동작구 신대방동", "est_price_59_eok": 11.0, "tier": 2, "status": "관심", "notes": "대방 인접.", "aliases": ["보라매역", "신대방동", "보라매공원"]},
+    {"name": "마곡", "region": "강서구 마곡동", "est_price_59_eok": 12.0, "tier": 2, "status": "관찰", "notes": "업무지구·신축이나 가격대 상방.", "aliases": ["마곡동", "마곡나루", "마곡엠밸리"]},
+    {"name": "검단", "region": "인천 서구 원당동", "est_price_59_eok": 5.0, "tier": 3, "status": "보유·참고", "notes": "검단 e편한세상 웰카운티. 부모 거주, 매도 대상 아님. 시세·정책 참고만.", "aliases": ["검단신도시", "e편한세상 웰카운티", "원당동"]}
+  ],
+  "catalysts": [
+    "등촌주공 정비",
+    "가양 CJ부지",
+    "스타필드 가양",
+    "9호선 급행",
+    "GTX"
+  ]
+}
