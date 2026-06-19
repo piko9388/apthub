@@ -21,11 +21,15 @@ def _today() -> str:
     return datetime.now(KST).date().isoformat()
 
 
-def add(signals: Iterable[Signal], day: str | None = None) -> int:
-    """시그널을 해당 날짜 파일에 저장(id 중복 시 덮어씀). 추가/갱신된 건수 반환."""
+def add(signals: Iterable[Signal], day: str | None = None,
+        replace: bool = False) -> int:
+    """시그널을 해당 날짜 파일에 저장(id 중복 시 덮어씀). 추가/갱신된 건수 반환.
+
+    replace=True 면 해당 날짜의 기존 시그널을 모두 비우고 새로 쓴다.
+    """
     config.ensure_dirs()
     day = day or _today()
-    existing = {s.id: s for s in load_day(day)}
+    existing = {} if replace else {s.id: s for s in load_day(day)}
     n = 0
     for sig in signals:
         existing[sig.id] = sig
@@ -35,6 +39,15 @@ def add(signals: Iterable[Signal], day: str | None = None) -> int:
         for sig in existing.values():
             f.write(json.dumps(sig.to_dict(), ensure_ascii=False) + "\n")
     return n
+
+
+def clear(day: str) -> bool:
+    """해당 날짜 시그널 파일 삭제. 존재했으면 True."""
+    path = _file_for(day)
+    if path.exists():
+        path.unlink()
+        return True
+    return False
 
 
 def load_day(day: str) -> list[Signal]:

@@ -56,7 +56,11 @@ def detect_category(text: str) -> tuple[str | None, list[str]]:
 
 
 def _rule_matches(text: str, rule: dict) -> bool:
-    """규칙: all_of_* 그룹은 전부, any_of_* 그룹은 각각 1개 이상 매칭."""
+    """규칙 매칭.
+      all_of_*  : 나열 키워드가 전부 있어야 함
+      any_of_*  : 그룹 내 1개 이상
+      none_of_* : 하나라도 있으면 탈락(오탐 방지 가드)
+    """
     low = text.lower()
     for field_name, words in rule.items():
         if field_name == "name" or not isinstance(words, list):
@@ -67,6 +71,9 @@ def _rule_matches(text: str, rule: dict) -> bool:
                 return False
         elif field_name.startswith("any_of"):
             if not present:
+                return False
+        elif field_name.startswith("none_of"):
+            if present:
                 return False
     return True
 

@@ -30,6 +30,20 @@ def _implication_line(sig: Signal) -> str:
     return sig.implication or "_(함의 미작성 — 채워 주세요)_"
 
 
+def _primary_unit(sig: Signal, units: list[dict]) -> str | None:
+    """시그널 제목에서 가장 먼저 등장하는 단지명을 '주제 단지'로 본다.
+    인접 단지를 함께 언급한 시그널이 여러 행에 중복 귀속되는 것을 막는다.
+    """
+    best_pos: int | None = None
+    best: str | None = None
+    for unit in units:
+        for name in [unit["name"]] + unit.get("aliases", []):
+            i = sig.title.find(name)
+            if i != -1 and (best_pos is None or i < best_pos):
+                best_pos, best = i, unit["name"]
+    return best
+
+
 def _sort_key(sig: Signal):
     return (
         TRIGGER_RANK.get(sig.trigger, 2),
@@ -77,9 +91,10 @@ def render_daily(signals: Iterable[Signal], day: str | None = None) -> str:
             lines.append(f"- 금리: {s.summary or s.title} ({_src(s)})")
     lines.append("")
 
-    # 📰 정책/뉴스 Top 3 (시세/금리 스냅 제외분에서)
-    pool = [s for s in signals if s.category not in ("price", "macro")]
-    pool = pool or [s for s in signals if s not in reds]
+    # 📰 정책/뉴스 Top 3 (🔴 핵심 트리거·시세/금리 스냅에 이미 나온 건 제외 → 중복 방지·반도체 등 노출)
+    shown_ids = {s.id for s in reds}
+    pool = [s for s in signals
+            if s.category not in ("price", "macro") and s.id not in shown_ids]
     top = pool[:3]
     lines.append("## 📰 정책/뉴스 Top 3")
     if top:
@@ -150,11 +165,12 @@ def render_weekly(signals: Iterable[Signal], start: str, end: str,
     lines.append("| 단지 | 전용59(추정) | 주간 변동 | 메모 |")
     lines.append("|---|---|---|---|")
     price_sigs = [s for s in signals if s.category == "price"]
-    for unit in config.target_areas()["units"]:
+    units = config.target_areas()["units"]
+    for unit in units:
         if unit["tier"] > 2:
             continue
-        related = [s for s in price_sigs
-                   if unit["name"] in s.areas or any(a in s.areas for a in unit.get("aliases", []))]
+        # 시그널은 '제목에서 가장 먼저 등장하는 단지'(주제 단지)에만 귀속 → 인접 언급 오염 방지
+        related = [s for s in price_sigs if _primary_unit(s, units) == unit["name"]]
         memo = "; ".join(s.summary or s.title for s in related)[:60] if related else "-"
         change = "신규 시그널" if related else "-"
         lines.append(f"| {unit['name']} | ~{unit['est_price_59_eok']}억 | {change} | {memo} |")

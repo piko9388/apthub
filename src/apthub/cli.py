@@ -28,8 +28,9 @@ def cmd_add(args) -> int:
     if not text.strip():
         print("입력이 비어 있습니다 (JSON 배열/단건).", file=sys.stderr)
         return 1
-    sigs = manual.ingest_json(text, day=args.day)
-    print(f"저장 {len(sigs)}건 (day={args.day or _today()})")
+    sigs = manual.ingest_json(text, day=args.day, replace=args.replace)
+    mode = "덮어쓰기" if args.replace else "병합"
+    print(f"저장 {len(sigs)}건 ({mode}, day={args.day or _today()})")
     for s in sigs:
         tag = {"red": "🔴", "yellow": "🟡", "none": "·"}[s.trigger]
         print(f"  {tag} [{s.category}] {s.title}  areas={s.areas} kw={s.keywords}")
@@ -45,6 +46,12 @@ def cmd_enrich(args) -> int:
             store.add(sigs, day=day)
             total += len(sigs)
     print(f"enrich 완료: {total}건 / {len(days)}일")
+    return 0
+
+
+def cmd_clear(args) -> int:
+    ok = store.clear(args.day)
+    print(f"{'삭제됨' if ok else '대상 없음'}: {args.day}")
     return 0
 
 
@@ -90,7 +97,12 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--file", help="JSON 파일 경로")
     a.add_argument("--stdin", action="store_true", help="stdin 에서 읽기(기본)")
     a.add_argument("--day", help="저장 날짜 YYYY-MM-DD")
+    a.add_argument("--replace", action="store_true", help="해당 날짜를 비우고 새로 저장")
     a.set_defaults(func=cmd_add)
+
+    c = sub.add_parser("clear", help="해당 날짜 시그널 삭제")
+    c.add_argument("--day", required=True, help="삭제할 날짜 YYYY-MM-DD")
+    c.set_defaults(func=cmd_clear)
 
     e = sub.add_parser("enrich", help="저장된 시그널 재태깅")
     e.add_argument("--day", help="대상 날짜")

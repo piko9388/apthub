@@ -24,16 +24,18 @@ def to_signal(item: dict) -> Signal:
     return filters.enrich(Signal.from_dict(item))
 
 
-def ingest(items: Iterable[dict], day: str | None = None) -> list[Signal]:
+def ingest(items: Iterable[dict], day: str | None = None,
+           replace: bool = False) -> list[Signal]:
     """파싱 dict 목록 → enrich → 저장. 저장된 Signal 목록 반환."""
     signals = [to_signal(it) for it in items]
-    store.add(signals, day=day)
+    store.add(signals, day=day, replace=replace)
     return signals
 
 
-def ingest_json(text: str, day: str | None = None) -> list[Signal]:
+def ingest_json(text: str, day: str | None = None,
+                replace: bool = False) -> list[Signal]:
     """JSON 문자열(배열 또는 단건) 수용."""
     data = json.loads(text)
     if isinstance(data, dict):
         data = [data]
-    return ingest(data, day=day)
+    return ingest(data, day=day, replace=replace)

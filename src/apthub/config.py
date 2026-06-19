@@ -2,13 +2,15 @@
 from __future__ import annotations
 
 import json
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = ROOT / "config"
-DATA_DIR = ROOT / "data"
+# 데이터 루트는 APTHUB_DATA_DIR 로 재정의 가능(테스트/실전 격리).
+DATA_DIR = Path(os.environ.get("APTHUB_DATA_DIR", ROOT / "data"))
 SIGNALS_DIR = DATA_DIR / "signals"
 RAW_DIR = DATA_DIR / "raw"
 REPORTS_DIR = DATA_DIR / "reports"

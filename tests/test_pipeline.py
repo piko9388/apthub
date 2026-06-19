@@ -72,6 +72,42 @@ def test_weekly_report_table():
     assert "부읽남" in out
 
 
+def test_rate_nonevent_not_red():
+    # "기준금리 결정은 7월" 같은 비(非)이벤트는 🔴가 아니어야 함(none_of 가드).
+    s = filters.enrich(Signal(title="한은 6월 금통위는 금융안정회의 — 기준금리 결정은 7월",
+                              source="한은", summary="6월엔 기준금리 결정 회의가 없고"))
+    assert s.category == "macro"
+    assert s.trigger == "none"
+    # 실제 인상/인하는 여전히 🔴
+    s2 = filters.enrich(Signal(title="한국은행 기준금리 0.25%p 인하", source="한은"))
+    assert s2.trigger == "red"
+
+
+def test_weekly_table_no_cross_unit_bleed():
+    # 등촌3 제목이 '가양'을 언급해도, 가양 행에 등촌3 메모가 새지 않아야 함.
+    s = filters.enrich(Signal(title="등촌주공3단지 10.9억 신고가 — 가양·등촌 정비 수혜",
+                              source="RTMS", category="price", implication="x"))
+    out = report.render_weekly([s], "2026-06-15", "2026-06-21")
+    rows = {ln.split("|")[1].strip(): ln for ln in out.splitlines()
+            if ln.startswith("| ") and "전용59" not in ln and "---" not in ln}
+    assert "신규 시그널" in rows["등촌주공3단지"]
+    assert "신규 시그널" not in rows["가양"]
+    assert "신규 시그널" not in rows["마곡"]
+
+
+def test_daily_surfaces_semicon():
+    # 정책 🔴가 많아도 반도체(🟡)가 Top3 에서 사라지지 않아야 함.
+    sigs = [
+        filters.enrich(Signal(title="DSR 강화", source="금융위", category="policy", implication="a")),
+        filters.enrich(Signal(title="LTV 인하 변경", source="금융위", category="policy", implication="b")),
+        filters.enrich(Signal(title="생애최초 요건 강화", source="금융위", category="policy", implication="c")),
+        filters.enrich(Signal(title="SK하이닉스 실적 서프라이즈", source="DART", category="semicon", implication="d")),
+    ]
+    out = report.render_daily(sigs, day="2026-06-19")
+    top3 = out.split("Top 3")[1]
+    assert "하이닉스" in top3  # 반도체가 Top3 에 노출
+
+
 if __name__ == "__main__":
     import traceback
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]

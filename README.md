@@ -45,11 +45,14 @@ PYTHONPATH=src python3 -m apthub report weekly --day 2026-06-19 --save
 
 | 명령 | 설명 |
 |---|---|
-| `apthub add --file f.json [--day D]` | 파싱 JSON(배열/단건) 적재 + 자동 태깅 |
+| `apthub add --file f.json [--day D] [--replace]` | 파싱 JSON(배열/단건) 적재 + 자동 태깅. `--replace`는 해당 날짜를 비우고 새로 저장 |
+| `apthub clear --day D` | 해당 날짜 시그널 삭제 |
 | `apthub enrich [--day D \| --all]` | 저장된 시그널 재태깅 |
 | `apthub report daily [--day D] [--save]` | 데일리 리포트 |
 | `apthub report weekly [--day D] [--save]` | 위클리 리포트(주 월~일) |
 | `apthub list [--day D]` | 저장된 시그널 목록 |
+
+> 환경변수 `APTHUB_DATA_DIR`로 데이터 루트를 바꿀 수 있다(테스트/실전 격리). 미설정 시 `./data`.
 
 ## 카테고리 & 트리거
 
