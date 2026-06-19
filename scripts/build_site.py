@@ -13,10 +13,12 @@ from __future__ import annotations
 
 import html
 import os
+import re
 import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
+from statistics import median
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_DATA = ROOT / ".build_data"
@@ -88,6 +90,101 @@ def confidence_of(url: str, given: str = "") -> str:
 
 def esc(s: str) -> str:
     return html.escape(s or "")
+
+
+# ---------------------------------------------------------------- 지역 지표 집계
+PRICE_RE = re.compile(r"(\d+(?:\.\d+)?)\s*억")
+
+
+def parse_sale_prices(sig) -> list[float]:
+    """price 시그널의 '대표 매매가'(억) 1개만 추출 — 제목 우선, 없으면 요약 첫 값.
+    전세·월세·정책수치 제외. 신호당 1표본이라 중위가 과대계상되지 않는다."""
+    if sig.category != "price":
+        return []
+    if ("전세" in sig.title or "월세" in sig.title) and "매매" not in sig.title:
+        return []
+    for text in (sig.title, sig.summary):
+        for m in PRICE_RE.findall(text):
+            try:
+                v = float(m)
+            except ValueError:
+                continue
+            if 3.0 <= v <= 60.0:      # 수도권 아파트 현실 범위(억) — 첫 표본 채택
+                return [v]
+    return []
+
+
+def region_metrics(sigs):
+    """(시도, 시군구) → {n, prices[], latest, red}. 대표 지역(첫 매칭)에 귀속."""
+    by = {}
+    for s in sigs:
+        if not s.region:
+            continue
+        sido = s.sido or "전국"
+        if sido == "전국":
+            continue
+        key = (sido, s.region[0])
+        d = by.setdefault(key, {"n": 0, "prices": [], "latest": "", "red": 0})
+        d["n"] += 1
+        d["prices"] += parse_sale_prices(s)
+        if (s.date or "") > d["latest"]:
+            d["latest"] = s.date or ""
+        if s.trigger == "red":
+            d["red"] += 1
+    return by
+
+
+def _fmt(v):
+    return f"{v:.1f}".rstrip("0").rstrip(".")
+
+
+def render_region_dashboard(sigs) -> str:
+    by = region_metrics(sigs)
+    # 시/도 요약 카드
+    sido_cards = ""
+    for sido in SIDO_ORDER:
+        if sido == "전국":
+            continue
+        rows = [(k[1], v) for k, v in by.items() if k[0] == sido]
+        if not rows:
+            continue
+        n = sum(v["n"] for _, v in rows)
+        prices = [p for _, v in rows for p in v["prices"]]
+        med = f"중위 {_fmt(median(prices))}억" if prices else "가격 표본 부족"
+        rng = f" · {_fmt(min(prices))}~{_fmt(max(prices))}억" if prices else ""
+        sido_cards += (f'<div class="dcard"><h4>{sido} <em>{len(rows)}개 구·시</em></h4>'
+                       f'<ul><li>매매 시그널 <b>{n}</b>건</li>'
+                       f'<li>{med}{rng}</li></ul></div>')
+
+    # 시군구 지표 테이블 (시도→매매중위 desc)
+    order = {s: i for i, s in enumerate(SIDO_ORDER)}
+    items = sorted(by.items(),
+                   key=lambda kv: (order.get(kv[0][0], 9),
+                                   -(median(kv[1]["prices"]) if kv[1]["prices"] else 0)))
+    rows_html = ""
+    for (sido, dist), v in items:
+        pr = v["prices"]
+        if len(pr) >= 3:                       # 표본 3건 이상만 중위·시세대 표시(신뢰도)
+            med = _fmt(median(pr))
+            rng = f"{_fmt(min(pr))}~{_fmt(max(pr))}"
+        else:
+            med = "-"
+            rng = f"표본 {len(pr)}" if pr else "-"
+        red = f'<span class="rdot">🔴{v["red"]}</span>' if v["red"] else ""
+        rows_html += (f'<tr data-sido="{sido}"><td>{esc(sido)}</td><td>{esc(dist)}</td>'
+                      f'<td class="num">{v["n"]}</td><td class="num">{med}</td>'
+                      f'<td class="num rng">{rng}</td><td>{red}</td>'
+                      f'<td class="dt">{esc(v["latest"])}</td></tr>')
+
+    return (f'<section class="dash"><div class="lead">지역 지표 — 매매가(억)·시그널 집계 '
+            f'(수집 데이터 기반, 신고가·정책 트리거 포함)</div>'
+            f'<div class="dgrid3">{sido_cards}</div>'
+            f'<div class="tablewrap"><table class="metrics">'
+            f'<thead><tr><th>시/도</th><th>시군구</th><th class="num">시그널</th>'
+            f'<th class="num">매매중위<br>(억)</th><th class="num">시세대<br>(억)</th>'
+            f'<th>긴급</th><th>최근</th></tr></thead><tbody>{rows_html}</tbody></table></div>'
+            f'<p class="foot-note">※ 매매중위·시세대는 수집된 실거래·시세 시그널 본문에서 추출한 '
+            f'표본 통계로 참고용이며, 공식 시세(부동산원·KB)와 차이가 있을 수 있습니다.</p></section>')
 
 
 def load_all():
@@ -287,6 +384,7 @@ def build():
 
     doc = TEMPLATE.format(
         updated=updated, total=len(sigs), reds=reds, yellows=yellows,
+        region_dash=render_region_dashboard(sigs),
         summary=core_summary(sigs), chips=chips, region_chips=region_chips,
         sections=policy_sections(sigs),
         personal_tab=personal_tab, personal_block=personal_block,
@@ -339,7 +437,20 @@ TEMPLATE = """<!DOCTYPE html>
   .lead b {{ color:var(--red); }}
   .dash {{ margin-top:8px; }}
   .dgrid {{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }}
-  @media (max-width:560px) {{ .dgrid {{ grid-template-columns:1fr; }} }}
+  .dgrid3 {{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px; }}
+  @media (max-width:560px) {{ .dgrid, .dgrid3 {{ grid-template-columns:1fr; }} }}
+  .tablewrap {{ overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius);
+    background:var(--surface); box-shadow:var(--shadow); }}
+  table.metrics {{ width:100%; border-collapse:collapse; font-size:13px; min-width:520px; }}
+  table.metrics th {{ background:#f4f6f9; color:var(--navy2); font-weight:600; text-align:left;
+    padding:9px 10px; border-bottom:1px solid var(--border); font-size:12px; white-space:nowrap; }}
+  table.metrics td {{ padding:8px 10px; border-bottom:1px solid #f0f2f5; }}
+  table.metrics tr:last-child td {{ border-bottom:none; }}
+  table.metrics .num {{ text-align:right; font-variant-numeric:tabular-nums; }}
+  table.metrics .rng {{ color:var(--muted); }}
+  table.metrics .dt {{ color:var(--muted); font-size:11px; white-space:nowrap; }}
+  .rdot {{ color:var(--red); font-size:11px; }}
+  .foot-note {{ color:var(--muted); font-size:11px; margin:8px 2px 0; }}
   .dcard {{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
     padding:14px 16px; box-shadow:var(--shadow); }}
   .dcard h4 {{ margin:0 0 8px; font-size:13px; color:var(--accent); }}
@@ -427,12 +538,13 @@ TEMPLATE = """<!DOCTYPE html>
 
 <div class="wrap">
   <div class="tabs">
-    <button class="tab on" data-v="policy">정책 동향</button>
+    <button class="tab on" data-v="policy">대시보드</button>
     <button class="tab" data-v="frames">부읽남 참고</button>
     {personal_tab}
   </div>
 
   <div id="view-policy" class="view on">
+    {region_dash}
     {summary}
     <div class="rbar">{region_chips}</div>
     <div class="bar">
