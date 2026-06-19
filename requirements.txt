@@ -1,0 +1,10 @@
+# Phase 1 (채팅 수동파싱): 표준 라이브러리만으로 동작 — 필수 의존성 없음.
+
+# Phase 2 (자동 수집) 활성화 시:
+# httpx>=0.27        # RTMS/ECOS/DART/R-ONE Open API 호출
+# feedparser>=6.0    # 뉴스 RSS 파싱
+# beautifulsoup4>=4  # 보도자료 페이지 파싱(저빈도)
+# python-dotenv>=1.0 # API 키 .env 로딩
+
+# 테스트(선택):
+# pytest>=8.0
