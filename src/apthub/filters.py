@@ -41,23 +41,23 @@ def detect_areas(text: str) -> list[str]:
 
 def detect_regions(text: str) -> tuple[str | None, list[str]]:
     """수도권 광역(sido)·시군구(region) 매칭. config/regions.json 기반.
-    여러 시도가 잡히면 매칭 수가 많은 쪽을 대표 sido로.
+
+    시군구 매칭은 광역 alias보다 가중치를 높게 둬 대표 sido를 정하고,
+    region 은 '선택된 sido'의 매칭 구만 반환한다(타 시도 구 혼입 방지).
     """
     low = text.lower()
-    region_hits: list[str] = []
-    sido_score: dict[str, int] = {}
+    per_sido: dict[str, tuple[int, list[str]]] = {}
     for sido, spec in config.regions().items():
-        n = 0
-        for district, names in spec["districts"].items():
-            if any(name.lower() in low for name in [district] + names):
-                region_hits.append(district)
-                n += 1
-        if any(a.lower() in low for a in spec["aliases"]):
-            n += 1
-        if n:
-            sido_score[sido] = n
-    sido = max(sido_score, key=sido_score.get) if sido_score else None  # type: ignore[arg-type]
-    return sido, _dedup(region_hits)
+        dists = [district for district, names in spec["districts"].items()
+                 if any(name.lower() in low for name in [district] + names)]
+        alias = 1 if any(a.lower() in low for a in spec["aliases"]) else 0
+        score = 2 * len(dists) + alias          # 구 매칭 우선
+        if score:
+            per_sido[sido] = (score, dists)
+    if not per_sido:
+        return None, []
+    sido = max(per_sido, key=lambda s: per_sido[s][0])
+    return sido, _dedup(per_sido[sido][1])
 
 
 def detect_category(text: str) -> tuple[str | None, list[str]]:
