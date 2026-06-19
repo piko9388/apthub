@@ -40,19 +40,20 @@ def detect_areas(text: str) -> list[str]:
 
 
 def detect_category(text: str) -> tuple[str | None, list[str]]:
-    """카테고리 추론 + 매칭된 키워드. 우선순위(priority) 높은 카테고리 채택."""
+    """카테고리 추론 + 매칭된 키워드. 매칭 수 우선, 동률이면 priority 높은 카테고리."""
     cats = config.monitoring()["categories"]
-    best: tuple[int, str] | None = None
+    best_score: tuple[int, int] | None = None
+    best_key: str | None = None
     all_hits: list[str] = []
     for key, spec in cats.items():
         hits = match_keywords(text, spec["keywords"])
         if hits:
             all_hits.extend(hits)
-            score = (len(hits), -spec["priority"])  # 매칭 수 우선, 동률이면 priority
-            if best is None or score > best[0:2]:  # type: ignore[index]
-                best = (len(hits), key)  # type: ignore[assignment]
-    cat = best[1] if best else None
-    return cat, _dedup(all_hits)
+            score = (len(hits), -spec["priority"])  # 매칭 수, 그다음 priority(작을수록 우선)
+            if best_score is None or score > best_score:
+                best_score = score
+                best_key = key
+    return best_key, _dedup(all_hits)
 
 
 def _rule_matches(text: str, rule: dict) -> bool:

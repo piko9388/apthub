@@ -69,6 +69,44 @@ def card(sig) -> str:
 </article>"""
 
 
+def dashboard(sigs) -> str:
+    """상단 요약 대시보드 — 매수 타이밍·자기자본·후보단지·최근 트리거."""
+    recent_reds = [s for s in sigs if s.trigger == "red"][:3]
+    red_li = "".join(
+        f'<li><span class="dd">{esc(s.date or "")}</span>{esc(s.title)}</li>'
+        for s in recent_reds) or "<li>최근 🔴 없음</li>"
+
+    blocks = [
+        ("매수 타이밍 2안", [
+            "<b>8월(희망#1)</b> 천장 ~8.5억 · 희주 단독 생애최초 LTV70%",
+            "<b>27.2(희망#2)</b> 천장 ~10.5억 · 성과급(PS) 보강 후",
+            "5월 매파 전환·서울 +11% → <b>가격상승 vs 자기자본증가</b> 트레이드오프",
+        ]),
+        ("자기자본 조달", [
+            "대출은 <b>6억 상한</b> 고정 → 8.5억 매수 시 <b>갭 2.5억</b>",
+            "PS: 26.2 수령 세전 ~1.48억(2025 실적)",
+            "증여: 혼인·출산 공제로 <b>양가 최대 3억</b> 무세",
+        ]),
+        ("후보 단지", [
+            "<b>천장 내</b> 가양·발산·염창·우장산 구축 59㎡ (≈7~9억)",
+            "<b>관찰</b> 등촌주공3·5·마곡 (천장 초과)",
+            "토허 실거주 의무=정훈 계획과 일치(페널티 아님)",
+        ]),
+        ("27.2 업사이드", [
+            "하이닉스 2026 영업이익 <b>250조+</b> 전망",
+            "→ 27.2 PS 1인 수억 거론 → 천장 10.5억은 <b>보수적</b>일 수",
+            "검단 매각 없이도 강서 상급 진입 여력 가능",
+        ]),
+    ]
+    cards = ""
+    for title, items in blocks:
+        lis = "".join(f"<li>{x}</li>" for x in items)
+        cards += f'<div class="dcard"><h4>{title}</h4><ul>{lis}</ul></div>'
+    return (f'<section class="dash"><div class="dgrid">{cards}</div>'
+            f'<div class="dcard wide"><h4>🔴 최근 핵심 트리거</h4>'
+            f'<ul class="reds">{red_li}</ul></div></section>')
+
+
 def build():
     sigs = load_all()
     reds = sum(1 for s in sigs if s.trigger == "red")
@@ -84,7 +122,7 @@ def build():
 
     doc = TEMPLATE.format(
         ceil=esc(ceil), updated=updated, total=len(sigs), reds=reds, yellows=yellows,
-        chips=chips, cards=cards,
+        chips=chips, cards=cards, dashboard=dashboard(sigs),
     )
     SITE.mkdir(exist_ok=True)
     (SITE / "index.html").write_text(doc, encoding="utf-8")
@@ -126,9 +164,24 @@ TEMPLATE = """<!DOCTYPE html>
   .stats {{ display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }}
   .stat {{ background:rgba(255,255,255,.08); border-radius:10px; padding:8px 12px; font-size:13px; }}
   .stat b {{ font-size:16px; display:block; }}
+  .dash {{ margin-top:18px; }}
+  .dgrid {{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }}
+  @media (max-width:560px) {{ .dgrid {{ grid-template-columns:1fr; }} }}
+  .dcard {{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:14px 16px; box-shadow:var(--shadow);
+  }}
+  .dcard.wide {{ margin-top:12px; }}
+  .dcard h4 {{ margin:0 0 8px; font-size:13px; color:var(--accent); letter-spacing:-.2px; }}
+  .dcard ul {{ margin:0; padding:0; list-style:none; }}
+  .dcard li {{ font-size:13px; color:var(--navy2); padding:3px 0; }}
+  .dcard li + li {{ border-top:1px solid #f0f2f5; }}
+  .dcard b {{ color:var(--navy); }}
+  .reds li {{ display:flex; gap:8px; align-items:baseline; }}
+  .reds .dd {{ color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums; flex:0 0 auto; }}
   .bar {{
     position:sticky; top:0; z-index:5; background:var(--bg);
-    padding:12px 0 8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+    padding:12px 0 8px; margin-top:18px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;
   }}
   .chip, .tog {{
     border:1px solid var(--border); background:var(--surface); color:var(--navy2);
@@ -185,6 +238,7 @@ TEMPLATE = """<!DOCTYPE html>
 </div></header>
 
 <div class="wrap">
+  {dashboard}
   <div class="bar">
     <button class="chip on" data-f="all">전체</button>
     {chips}
