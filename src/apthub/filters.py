@@ -39,6 +39,27 @@ def detect_areas(text: str) -> list[str]:
     return _dedup(found)
 
 
+def detect_regions(text: str) -> tuple[str | None, list[str]]:
+    """수도권 광역(sido)·시군구(region) 매칭. config/regions.json 기반.
+    여러 시도가 잡히면 매칭 수가 많은 쪽을 대표 sido로.
+    """
+    low = text.lower()
+    region_hits: list[str] = []
+    sido_score: dict[str, int] = {}
+    for sido, spec in config.regions().items():
+        n = 0
+        for district, names in spec["districts"].items():
+            if any(name.lower() in low for name in [district] + names):
+                region_hits.append(district)
+                n += 1
+        if any(a.lower() in low for a in spec["aliases"]):
+            n += 1
+        if n:
+            sido_score[sido] = n
+    sido = max(sido_score, key=sido_score.get) if sido_score else None  # type: ignore[arg-type]
+    return sido, _dedup(region_hits)
+
+
 def detect_category(text: str) -> tuple[str | None, list[str]]:
     """카테고리 추론 + 매칭된 키워드. 매칭 수 우선, 동률이면 priority 높은 카테고리."""
     cats = config.monitoring()["categories"]
@@ -112,6 +133,11 @@ def enrich(sig: Signal) -> Signal:
     sig.keywords = _dedup(list(sig.keywords) + kw_hits)
     if not sig.category:
         sig.category = cat
+
+    sido, regions = detect_regions(text)
+    sig.region = _dedup(list(sig.region) + regions)
+    if not sig.sido:
+        sig.sido = sido or ("전국" if sig.category == "policy" else None)
 
     # trigger: 수동으로 더 높은 등급을 줬으면 보존
     auto_trig, reasons = evaluate_triggers(text)

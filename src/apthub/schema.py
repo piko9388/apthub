@@ -48,6 +48,9 @@ class Signal:
     url: str = ""
     date: Optional[str] = None            # 발행일 YYYY-MM-DD
     category: Optional[str] = None        # policy|price|macro|semicon
+    sido: Optional[str] = None            # 서울|경기|인천|전국 (광역)
+    region: list[str] = field(default_factory=list)    # 매칭된 시군구
+    comment: str = ""                     # 해석 코멘트(중립·일반 독자용)
     areas: list[str] = field(default_factory=list)     # 매칭된 관심 지역/단지
     keywords: list[str] = field(default_factory=list)  # 매칭된 키워드
     trigger: str = "none"                 # red|yellow|none

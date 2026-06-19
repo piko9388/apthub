@@ -95,6 +95,18 @@ def test_weekly_table_no_cross_unit_bleed():
     assert "신규 시그널" not in rows["마곡"]
 
 
+def test_region_detection():
+    s = filters.enrich(Signal(title="강서구 등촌주공3 신고가", source="RTMS", category="price"))
+    assert s.sido == "서울" and "강서구" in s.region
+    s2 = filters.enrich(Signal(title="검단신도시 우미린 59㎡ 5억", source="x", category="price"))
+    assert s2.sido == "인천" and "서구" in s2.region
+    s3 = filters.enrich(Signal(title="분당 판교 시세", source="x", category="price"))
+    assert s3.sido == "경기" and "성남시" in s3.region
+    # 전국 정책은 sido=전국 폴백
+    s4 = filters.enrich(Signal(title="스트레스 DSR 3단계 시행", source="금융위", category="policy"))
+    assert s4.sido == "전국"
+
+
 def test_daily_surfaces_semicon():
     # 정책 🔴가 많아도 반도체(🟡)가 Top3 에서 사라지지 않아야 함.
     sigs = [

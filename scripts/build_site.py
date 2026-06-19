@@ -41,6 +41,17 @@ TOPICS = [
 TOPIC_LABEL = {k: v for k, v, _ in TOPICS}
 TOPIC_DESC = {k: d for k, _, d in TOPICS}
 TRIGGER = {"red": "🔴 즉시", "yellow": "🟡 주목", "none": ""}
+SIDO_ORDER = ["서울", "경기", "인천", "전국"]
+
+# 정책 이슈별 해석 코멘트(중립·일반 독자용)
+TOPIC_NOTE = {
+    "loan": "6억 상한 + 스트레스 DSR 3단계로 '소득 대비 상환능력'이 한도를 결정. 고소득·생애최초·출산 가구가 아니면 레버리지 진입장벽이 구조적으로 높아진 국면.",
+    "tax": "1주택 비과세·종부세 기준이 12억으로 상향돼 실수요 1주택 부담은 완화. 다만 조정지역은 2년 거주의무가 붙어 '실거주 가능자'에게 유리. 혼인·출산 증여로 자산이전 통로 확대.",
+    "zone": "10.15로 서울 전역이 규제지역+토지거래허가. 갭투자(전세 끼고 매수)는 사실상 차단되고 실거주 의무가 핵심 변수 → 비규제 인천·외곽으로 풍선효과.",
+    "supply": "공급 확대는 2027년 이후 물량이라 단기 수급 완화 효과는 제한적. 재건축·노후계획도시·교통(GTX·신설노선)은 중장기 '계획→과정' 호재로 작동.",
+    "rate": "기준금리 2.5% 동결 장기화 속 5월 매파 전환으로 인상 리스크 부각, 인하는 26 하반기~27 전망. 입주절벽·전세난이 매매 수요를 떠받치는 구조.",
+    "market": "2025 서울 +11% 급등 후 규제에도 상급지·재건축 기대지역·역세권 중심 차별적 강세. 신축·대형은 천장가, 구축 중소형이 실수요 진입 구간.",
+}
 
 
 def esc(s: str) -> str:
@@ -89,15 +100,19 @@ def card(sig, public: bool = True) -> str:
     badge = f'<span class="badge {trig}">{TRIGGER[trig]}</span>' if trig != "none" else ""
     src = (f'<a class="src" href="{esc(sig.url)}" target="_blank" rel="noopener">{esc(sig.source)} ↗</a>'
            if sig.url else f'<span class="src">{esc(sig.source)}</span>')
+    cmt = f'<p class="cmt"><b>해석</b> {esc(sig.comment)}</p>' if sig.comment else ""
     impl = ""
     if not public and sig.implication:
         impl = f'<p class="impl"><b>내 함의</b> {esc(sig.implication)}</p>'
     topic = topic_of(sig) or "market"
-    return f"""<article class="card" data-topic="{topic}" data-trig="{trig}">
-  <div class="meta"><span class="date">{esc(sig.date or '')}</span>{badge}</div>
+    sido = sig.sido or "전국"
+    loc = sido + ((" · " + sig.region[0]) if sig.region else "")
+    return f"""<article class="card" data-topic="{topic}" data-trig="{trig}" data-sido="{sido}">
+  <div class="meta"><span class="date">{esc(sig.date or '')}</span>
+    <span class="loc">{esc(loc)}</span>{badge}</div>
   <h3>{esc(sig.title)}</h3>
   <p class="sum">{esc(sig.summary)}</p>
-  {impl}
+  {cmt}{impl}
   <div class="foot">{src}</div>
 </article>"""
 
@@ -145,9 +160,10 @@ def policy_sections(sigs) -> str:
         if not items:
             continue
         cards = "\n".join(card(s, public=True) for s in items)
+        note = f'<p class="tnote"><b>해석</b> {esc(TOPIC_NOTE.get(key, ""))}</p>' if TOPIC_NOTE.get(key) else ""
         out += (f'<section class="topic" data-topic="{key}">'
                 f'<div class="thead"><h3>{label} <em>{len(items)}</em></h3>'
-                f'<span class="tdesc">{esc(desc)}</span></div>{cards}</section>')
+                f'<span class="tdesc">{esc(desc)}</span></div>{note}{cards}</section>')
     return out
 
 
@@ -194,6 +210,23 @@ def personal_view(sigs) -> str:
             f'<ul>{impl_li}</ul></section>')
 
 
+def budreadnam_view() -> str:
+    """부읽남 38강 체계적 재분류·해석 참고 섹션."""
+    import json
+    path = ROOT / "config" / "budreadnam-frames.json"
+    if not path.exists():
+        return ""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    cards = ""
+    for th in data["themes"]:
+        prins = "".join(f"<li>{esc(p)}</li>" for p in th["principles"])
+        cards += (f'<article class="frame"><div class="meta">'
+                  f'<span class="loc">{esc(th["lectures"])}</span></div>'
+                  f'<h3>{esc(th["title"])}</h3><ul class="prin">{prins}</ul>'
+                  f'<p class="cmt"><b>2026</b> {esc(th["note2026"])}</p></article>')
+    return (f'<div class="lead">{esc(data["source"])}</div>{cards}')
+
+
 def build():
     sigs = load_all()
     reds = sum(1 for s in sigs if s.trigger == "red")
@@ -206,14 +239,24 @@ def build():
         if n:
             chips += f'<button class="chip" data-f="{key}">{label} <em>{n}</em></button>'
 
+    # 지역(시/도) 필터 칩
+    region_chips = '<button class="rchip on" data-r="all">전국·전체</button>'
+    main_sigs = [s for s in sigs if topic_of(s)]
+    for sido in SIDO_ORDER:
+        n = sum(1 for s in main_sigs if (s.sido or "전국") == sido)
+        if n:
+            region_chips += f'<button class="rchip" data-r="{sido}">{sido} <em>{n}</em></button>'
+
     personal = personal_view(sigs)
     personal_tab = "" if PUBLIC_ONLY else '<button class="tab" data-v="personal">개인 맞춤</button>'
     personal_block = "" if PUBLIC_ONLY else f'<div id="view-personal" class="view">{personal}</div>'
 
     doc = TEMPLATE.format(
         updated=updated, total=len(sigs), reds=reds, yellows=yellows,
-        summary=core_summary(sigs), chips=chips, sections=policy_sections(sigs),
+        summary=core_summary(sigs), chips=chips, region_chips=region_chips,
+        sections=policy_sections(sigs),
         personal_tab=personal_tab, personal_block=personal_block,
+        budreadnam=budreadnam_view(),
     )
     SITE.mkdir(exist_ok=True)
     (SITE / "index.html").write_text(doc, encoding="utf-8")
@@ -270,6 +313,12 @@ TEMPLATE = """<!DOCTYPE html>
   .dcard li {{ font-size:13px; color:var(--navy2); padding:3px 0; }}
   .dcard li + li {{ border-top:1px solid #f0f2f5; }}
   .dcard b {{ color:var(--navy); }}
+  .rbar {{ display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 2px; }}
+  .rchip {{ border:1px solid var(--border); background:var(--surface); color:var(--navy2);
+    border-radius:8px; padding:6px 12px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }}
+  .rchip em {{ font-style:normal; color:var(--muted); margin-left:2px; font-weight:400; }}
+  .rchip.on {{ background:var(--accent); color:#fff; border-color:var(--accent); }}
+  .rchip.on em {{ color:#dce7f2; }}
   .bar {{ position:sticky; top:0; z-index:5; background:var(--bg); padding:12px 0 8px;
     display:flex; gap:8px; flex-wrap:wrap; align-items:center; }}
   .chip {{ border:1px solid var(--border); background:var(--surface); color:var(--navy2);
@@ -288,11 +337,23 @@ TEMPLATE = """<!DOCTYPE html>
   .thead h3 {{ margin:0; font-size:16px; }}
   .thead h3 em {{ font-style:normal; color:var(--muted); font-size:13px; }}
   .tdesc {{ color:var(--muted); font-size:12px; }}
+  .tnote {{ background:#eef3f8; border:1px solid #dce6f0; border-radius:10px; padding:10px 13px;
+    margin:0 0 12px; font-size:13px; color:var(--navy2); }}
+  .tnote b {{ color:var(--accent); margin-right:6px; font-size:12px; }}
+  .cmt {{ margin:0 0 8px; padding:8px 12px; background:#f3f6f4; border-left:3px solid #4e8a6a;
+    border-radius:0 8px 8px 0; font-size:13px; color:var(--navy2); }}
+  .cmt b {{ color:#3a6b51; margin-right:6px; font-size:12px; }}
+  .frame {{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:14px 16px; margin-bottom:10px; box-shadow:var(--shadow); }}
+  .frame h3 {{ margin:4px 0 8px; font-size:16px; }}
+  .frame .prin {{ margin:0 0 8px; padding-left:18px; }}
+  .frame .prin li {{ font-size:13.5px; color:var(--navy2); padding:1px 0; }}
   .card {{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
     padding:14px 16px 12px; margin-bottom:10px; box-shadow:var(--shadow); }}
   .card.hide {{ display:none; }}
-  .meta {{ display:flex; align-items:center; gap:8px; margin-bottom:4px; }}
+  .meta {{ display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap; }}
   .date {{ color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }}
+  .loc {{ font-size:11px; color:var(--accent); background:#eef2f7; border-radius:5px; padding:1px 7px; }}
   .badge {{ font-size:12px; padding:2px 8px; border-radius:6px; font-weight:600; }}
   .badge.red {{ background:var(--redbg); color:var(--red); }}
   .badge.yellow {{ background:var(--amberbg); color:var(--amber); }}
@@ -329,20 +390,24 @@ TEMPLATE = """<!DOCTYPE html>
 <div class="wrap">
   <div class="tabs">
     <button class="tab on" data-v="policy">정책 동향</button>
+    <button class="tab" data-v="frames">부읽남 참고</button>
     {personal_tab}
   </div>
 
   <div id="view-policy" class="view on">
     {summary}
+    <div class="rbar">{region_chips}</div>
     <div class="bar">
       {chips}
       <button class="tog" data-t="red">🔴</button>
       <button class="tog" data-t="yellow">🟡</button>
-      <input id="q" type="search" placeholder="검색 (정책·단지·키워드)">
+      <input id="q" type="search" placeholder="검색 (정책·지역·단지·키워드)">
     </div>
     {sections}
     <div class="empty" id="empty">조건에 맞는 시그널이 없습니다.</div>
   </div>
+
+  <div id="view-frames" class="view">{budreadnam}</div>
 
   {personal_block}
 
@@ -360,7 +425,7 @@ TEMPLATE = """<!DOCTYPE html>
     }};
   }});
   // 정책 동향 필터
-  var topic=null, trig=null, q="";
+  var topic=null, trig=null, sido=null, q="";
   var cards=[].slice.call(document.querySelectorAll('#view-policy .card'));
   var sections=[].slice.call(document.querySelectorAll('#view-policy .topic'));
   function apply(){{
@@ -369,6 +434,7 @@ TEMPLATE = """<!DOCTYPE html>
       var ok=true;
       if(topic && c.dataset.topic!==topic) ok=false;
       if(trig && c.dataset.trig!==trig) ok=false;
+      if(sido && c.dataset.sido!==sido) ok=false;
       if(q && c.textContent.toLowerCase().indexOf(q)<0) ok=false;
       c.classList.toggle('hide',!ok); if(ok) shown++;
     }});
@@ -378,6 +444,13 @@ TEMPLATE = """<!DOCTYPE html>
     }});
     document.getElementById('empty').style.display = shown? 'none':'block';
   }}
+  document.querySelectorAll('.rchip').forEach(function(b){{
+    b.onclick=function(){{
+      document.querySelectorAll('.rchip').forEach(function(x){{x.classList.remove('on');}});
+      b.classList.add('on');
+      sido = b.dataset.r==='all'? null : b.dataset.r; apply();
+    }};
+  }});
   document.querySelectorAll('.chip').forEach(function(b){{
     b.onclick=function(){{
       document.querySelectorAll('.chip').forEach(function(x){{x.classList.remove('on');}});

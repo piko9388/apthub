@@ -35,6 +35,11 @@ def monitoring() -> dict[str, Any]:
     return _load("monitoring.json")
 
 
+@lru_cache(maxsize=None)
+def regions() -> dict[str, Any]:
+    return _load("regions.json")
+
+
 def ceilings_text() -> str:
     """리포트 헤더용 천장 요약. 예: '8월 ~8.5억 / 27.2 ~10.5억'."""
     parts = []
