@@ -54,6 +54,38 @@ TOPIC_NOTE = {
 }
 
 
+# 출처 신뢰도(도메인 기반) — m_signal_fetch.py 와 동일 기준
+TRUST = {
+    "공식": ["data.go.kr", "ecos.bok.or.kr", "opendart.fss.or.kr", "dart.fss.or.kr",
+             "fss.or.kr", "reb.or.kr", "rt.molit.go.kr", "molit.go.kr", "korea.kr",
+             "fsc.go.kr", "moef.go.kr", "nts.go.kr", "bok.or.kr", "myhome.go.kr",
+             "applyhome.co.kr", "seoul.go.kr", "assembly.go.kr", "news.skhynix.co.kr",
+             "kbland.kr", "kbstar.com"],
+    "언론": ["hankyung.com", "mk.co.kr", "edaily.co.kr", "heraldcorp.com", "thelec.kr",
+             "esgeconomy.com", "fnnews.com", "newsis.com", "asiatime.co.kr", "mt.co.kr",
+             "housingherald.co.kr", "kukinews.com", "etoday.co.kr", "viva100.com",
+             "dataeconomy.co.kr", "rcast.co.kr", "conslove.co.kr", "karnews.or.kr",
+             "youthassembly.kr", "mygoyang.com", "elderlypress.co.kr", "jjmagazin.com",
+             "reportera.co.kr", "globalepic.co.kr", "infogoodman.com", "kfenews.co.kr"],
+}
+TRUST_LABEL = {"공식": "● 공식", "언론": "◐ 언론", "추정": "○ 추정"}
+
+
+def confidence_of(url: str, given: str = "") -> str:
+    if given:
+        for k in ("공식", "언론", "추정"):
+            if k in given:
+                return k
+    host = ""
+    if url:
+        from urllib.parse import urlparse
+        host = (urlparse(url).hostname or "").lower()
+    for tier, domains in TRUST.items():
+        if any(d in host for d in domains):
+            return tier
+    return "추정"
+
+
 def esc(s: str) -> str:
     return html.escape(s or "")
 
@@ -107,9 +139,11 @@ def card(sig, public: bool = True) -> str:
     topic = topic_of(sig) or "market"
     sido = sig.sido or "전국"
     loc = sido + ((" · " + sig.region[0]) if sig.region else "")
+    conf = confidence_of(sig.url, sig.confidence)
+    conf_b = f'<span class="conf {conf}">{TRUST_LABEL[conf]}</span>'
     return f"""<article class="card" data-topic="{topic}" data-trig="{trig}" data-sido="{sido}">
   <div class="meta"><span class="date">{esc(sig.date or '')}</span>
-    <span class="loc">{esc(loc)}</span>{badge}</div>
+    <span class="loc">{esc(loc)}</span>{conf_b}{badge}</div>
   <h3>{esc(sig.title)}</h3>
   <p class="sum">{esc(sig.summary)}</p>
   {cmt}{impl}
@@ -354,6 +388,10 @@ TEMPLATE = """<!DOCTYPE html>
   .meta {{ display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap; }}
   .date {{ color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }}
   .loc {{ font-size:11px; color:var(--accent); background:#eef2f7; border-radius:5px; padding:1px 7px; }}
+  .conf {{ font-size:11px; border-radius:5px; padding:1px 7px; }}
+  .conf.공식 {{ color:#2e7d52; background:#eaf3ee; }}
+  .conf.언론 {{ color:#9a6b3a; background:#f3eee9; }}
+  .conf.추정 {{ color:var(--muted); background:#f0f1f3; }}
   .badge {{ font-size:12px; padding:2px 8px; border-radius:6px; font-weight:600; }}
   .badge.red {{ background:var(--redbg); color:var(--red); }}
   .badge.yellow {{ background:var(--amberbg); color:var(--amber); }}

@@ -51,6 +51,7 @@ class Signal:
     sido: Optional[str] = None            # 서울|경기|인천|전국 (광역)
     region: list[str] = field(default_factory=list)    # 매칭된 시군구
     comment: str = ""                     # 해석 코멘트(중립·일반 독자용)
+    confidence: str = ""                  # 출처 신뢰도(●공식|◐통설|○추정), 비면 URL서 추론
     areas: list[str] = field(default_factory=list)     # 매칭된 관심 지역/단지
     keywords: list[str] = field(default_factory=list)  # 매칭된 키워드
     trigger: str = "none"                 # red|yellow|none

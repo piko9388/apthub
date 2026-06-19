@@ -105,7 +105,19 @@ python3 tests/test_pipeline.py     # 또는: PYTHONPATH=src python3 -m pytest -q
 - 천장 숫자(8.5/10.5억)·관심단지는 비식별 수준으로 `config/`에만.
 - 수집은 RSS·Open API 우선, robots.txt·이용약관 준수. API 키는 `.env`(커밋 금지).
 
+## 공식 API 인제스트 하네스
+
+`scripts/m_signal_fetch.py` — 국토부 RTMS(실거래)·한국은행 ECOS(금리)·금감원 DART(공시)에서
+직접 끌어와 Signal JSON으로 변환(stdlib만, 블로그 스크래핑 없음). 도메인 기반 **출처 신뢰도**
+(●공식/◐언론/○추정)를 부여하며, 사이트 카드에도 동일 기준 배지가 표시된다.
+
+```bash
+python3 scripts/m_signal_fetch.py --selftest --with-confidence --out sample.json   # 키 없이 검증
+RTMS_KEY=… ECOS_KEY=… DART_KEY=… python3 scripts/m_signal_fetch.py --months 6 --out out.json
+PYTHONPATH=src python3 -m apthub add --file out.json --by-date
+```
+
 ## 로드맵 (Phase 2 — 자동화)
 
-`sources/`에 RTMS·ECOS·DART·RSS 커넥터 구현 → `summarize.py`(Claude 요약·함의 자동화) →
-`notify.py`(메일/텔레그램) → GitHub Actions cron(평일 데일리·일요일 위클리). 상세는 architecture.md 참고.
+위 하네스를 GitHub Actions cron으로 정기 실행 → `summarize.py`(Claude 요약·해석 자동화) →
+`notify.py`(메일/텔레그램). 상세는 architecture.md 참고.
