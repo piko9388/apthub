@@ -23,6 +23,16 @@ PYTHONPATH=src python3 -m apthub report weekly --day 2026-06-19 --save
 
 생성 예시: [`examples/daily-2026-06-19.md`](examples/daily-2026-06-19.md) · [`examples/weekly-2026-06-21.md`](examples/weekly-2026-06-21.md)
 
+## 백데이터 구축 (2026 전체)
+
+채팅에 기사를 붙여넣어 발행일별 백데이터를 쌓는다.
+
+1. **파싱 프롬프트** — [`docs/paste-prompt.md`](docs/paste-prompt.md)의 블록을 새 세션에 붙여넣고, 이어서 기사 원문(여러 건 가능)을 붙여넣으면 Signal JSON 배열로 변환된다.
+2. **적재(발행일별)** — `apthub add --file out.json --by-date` → 각 시그널이 자기 발행일 파일(`data/signals/YYYY-MM-DD.jsonl`)로 분산 저장된다.
+3. **과거 리포트** — `apthub report weekly --day 2026-05-28` 처럼 임의 과거 시점 조회 가능.
+
+큐레이션 시드는 [`data/seed/2026-backdata.json`](data/seed/2026-backdata.json)에 커밋해 두어 컨테이너 리셋에도 보존·재적재된다(`apthub add --file data/seed/2026-backdata.json --by-date`). 현재 시드에는 2025.6 6.27 대책 ~ 2026.6 강서 신고가까지 20건의 핵심 시그널이 담겨 있다.
+
 ## 채팅 수동파싱 워크플로 (Phase 1)
 
 1. **채팅에 원문을 붙여넣는다** — 부동산 뉴스, 국토부/금융위/기재부 보도자료, RTMS 실거래, DART 공시, 금통위 결정문 등.
@@ -45,7 +55,7 @@ PYTHONPATH=src python3 -m apthub report weekly --day 2026-06-19 --save
 
 | 명령 | 설명 |
 |---|---|
-| `apthub add --file f.json [--day D] [--replace]` | 파싱 JSON(배열/단건) 적재 + 자동 태깅. `--replace`는 해당 날짜를 비우고 새로 저장 |
+| `apthub add --file f.json [--day D] [--replace] [--by-date]` | 파싱 JSON(배열/단건) 적재 + 자동 태깅. `--replace`는 해당 날짜 덮어쓰기, `--by-date`는 각 시그널을 발행일 파일로 분산 저장(백데이터) |
 | `apthub clear --day D` | 해당 날짜 시그널 삭제 |
 | `apthub enrich [--day D \| --all]` | 저장된 시그널 재태깅 |
 | `apthub report daily [--day D] [--save]` | 데일리 리포트 |

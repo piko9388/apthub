@@ -28,9 +28,13 @@ def cmd_add(args) -> int:
     if not text.strip():
         print("입력이 비어 있습니다 (JSON 배열/단건).", file=sys.stderr)
         return 1
-    sigs = manual.ingest_json(text, day=args.day, replace=args.replace)
-    mode = "덮어쓰기" if args.replace else "병합"
-    print(f"저장 {len(sigs)}건 ({mode}, day={args.day or _today()})")
+    sigs = manual.ingest_json(text, day=args.day, replace=args.replace,
+                              by_date=args.by_date)
+    if args.by_date:
+        print(f"저장 {len(sigs)}건 (발행일별 백데이터 적재)")
+    else:
+        mode = "덮어쓰기" if args.replace else "병합"
+        print(f"저장 {len(sigs)}건 ({mode}, day={args.day or _today()})")
     for s in sigs:
         tag = {"red": "🔴", "yellow": "🟡", "none": "·"}[s.trigger]
         print(f"  {tag} [{s.category}] {s.title}  areas={s.areas} kw={s.keywords}")
@@ -98,6 +102,8 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--stdin", action="store_true", help="stdin 에서 읽기(기본)")
     a.add_argument("--day", help="저장 날짜 YYYY-MM-DD")
     a.add_argument("--replace", action="store_true", help="해당 날짜를 비우고 새로 저장")
+    a.add_argument("--by-date", action="store_true",
+                   help="각 시그널을 자신의 발행일 파일에 저장(백데이터 적재)")
     a.set_defaults(func=cmd_add)
 
     c = sub.add_parser("clear", help="해당 날짜 시그널 삭제")

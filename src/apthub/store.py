@@ -50,6 +50,19 @@ def clear(day: str) -> bool:
     return False
 
 
+def add_by_date(signals: Iterable[Signal]) -> int:
+    """각 시그널을 자신의 발행일(date) 파일에 저장(백데이터 적재용).
+    date 가 없으면 오늘 파일로. 날짜별로 묶어 병합 저장한다.
+    """
+    by_day: dict[str, list[Signal]] = {}
+    for s in signals:
+        by_day.setdefault(s.date or _today(), []).append(s)
+    total = 0
+    for day, sigs in by_day.items():
+        total += add(sigs, day=day)
+    return total
+
+
 def load_day(day: str) -> list[Signal]:
     path = _file_for(day)
     if not path.exists():

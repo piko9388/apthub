@@ -14,3 +14,7 @@ venv/
 /data/signals/*
 /data/reports/*
 !/data/**/.gitkeep
+
+# 백데이터 시드(시장 데이터·비민감)는 추적
+!/data/seed/
+!/data/seed/**

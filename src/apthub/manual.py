@@ -25,17 +25,23 @@ def to_signal(item: dict) -> Signal:
 
 
 def ingest(items: Iterable[dict], day: str | None = None,
-           replace: bool = False) -> list[Signal]:
-    """파싱 dict 목록 → enrich → 저장. 저장된 Signal 목록 반환."""
+           replace: bool = False, by_date: bool = False) -> list[Signal]:
+    """파싱 dict 목록 → enrich → 저장. 저장된 Signal 목록 반환.
+
+    by_date=True 면 각 시그널을 자신의 발행일 파일에 저장(백데이터 적재).
+    """
     signals = [to_signal(it) for it in items]
-    store.add(signals, day=day, replace=replace)
+    if by_date:
+        store.add_by_date(signals)
+    else:
+        store.add(signals, day=day, replace=replace)
     return signals
 
 
 def ingest_json(text: str, day: str | None = None,
-                replace: bool = False) -> list[Signal]:
+                replace: bool = False, by_date: bool = False) -> list[Signal]:
     """JSON 문자열(배열 또는 단건) 수용."""
     data = json.loads(text)
     if isinstance(data, dict):
         data = [data]
-    return ingest(data, day=day, replace=replace)
+    return ingest(data, day=day, replace=replace, by_date=by_date)
