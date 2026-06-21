@@ -1,10 +1,10 @@
 {
   "title": "APT-SIGNAL — 수도권 부동산 동향 브리핑",
-  "asof": "{period} 누적 {total}건(🔴 {reds}) 분석 · 업데이트 {updated}",
+  "asof": "분석 기간 {period} · 누적 {total}건(🔴 {reds}) · 업데이트 {updated}",
   "sections": [
     {
       "h": "한눈에",
-      "when": "{period} 기준",
+      "when": "{period} 흐름",
       "type": "bullets",
       "items": [
         "2025년 서울 아파트 <b>+11.26%</b> 급등 → 6·27·9·7·10·15 <b>3연타 규제</b> → 현재 거래절벽 속 ‘신축·상급지 강세 / 외곽·구축 조정’ <b>차별화 장세</b>.",
