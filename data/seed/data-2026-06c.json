@@ -1,0 +1,4 @@
+[
+  {"kind":"data","title":"전국 아파트 5분위 배율 13.4배 (2025-06)","source":"한국부동산원(국회 국토위 제출자료)","url":"https://www.imaeil.com/page/view/2026031810480473588","date":"2025-06-30","summary":"2025년 6월 전국 아파트 5분위 배율 13.4배(직전 1~5월 평균 13.0). 2026.1월 14.6배로 상승 추세 — 양극화 심화 시계열","category":"price","metric":"5분위 배율","value":13.4,"unit":"배","sido":"전국","confidence":"언론"},
+  {"kind":"data","title":"전국 민간아파트 60-85㎡ 분양가 평당 1,961만원 (2026-01·HUG)","source":"HUG 민간아파트 분양가격동향(규모별)","url":"https://www.data.go.kr/data/15061057/fileData.do","date":"2026-01-31","summary":"2026년 1월 전국 민간아파트 전용 60-85㎡ ㎡당 593.1만원 = 평당 약 1,961만원(최근 12개월 분양보증 평균). HUG 규모구분=전용면적","category":"price","metric":"분양가","value":1961,"unit":"만원","sido":"전국","area_band":"60-85","pyeong_price":1961,"confidence":"언론"}
+]
