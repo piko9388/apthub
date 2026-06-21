@@ -1,0 +1,4 @@
+[
+  {"kind":"data","title":"KB 경기 아파트 매매변동률 +0.17% (2026-06)","source":"KB부동산 주간아파트시장동향","url":"https://www.ajunews.com/view/20260619151508128","date":"2026-06-15","summary":"KB 6월 3주(6/15) 경기 아파트 매매변동률 +0.17%(전주 0.16%), 화성 동탄 1.52%로 2주 연속 전국 최고","category":"price","metric":"KB 매매변동률","value":0.17,"unit":"%","sido":"경기","confidence":"언론"},
+  {"kind":"data","title":"KB 전국 매수우위지수 46p (2026-06)","source":"KB부동산 데이터허브","url":"https://data.kbland.kr/databoard","date":"2026-06-01","summary":"2026.6.1 기준 KB 전국 매수우위지수 46p(전주 -0.97p), 기준선 100 하회로 매도자 우위·매수심리 위축(2개 크롤 라운드 교차확인)","category":"price","metric":"매수우위지수","value":46,"unit":"p","sido":"전국","confidence":"공식"}
+]
