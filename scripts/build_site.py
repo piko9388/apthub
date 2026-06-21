@@ -180,6 +180,8 @@ def client_signal(s) -> dict:
         "kind": getattr(s, "kind", "news"),
         "metric": getattr(s, "metric", ""), "value": getattr(s, "value", None),
         "unit": getattr(s, "unit", ""),
+        "aband": getattr(s, "area_band", ""), "pband": getattr(s, "price_band", ""),
+        "pyeong": getattr(s, "pyeong_price", None), "hh": getattr(s, "households", None),
     }
 
 
