@@ -1,0 +1,13 @@
+[
+  {
+    "complex": "래미안원베일리", "sido": "서울", "gu": "서초구", "dong": "반포동",
+    "lawd_cd": "11650", "households": 2990, "built_year": 2023,
+    "sizes_m2": [59, 84, 133], "pyeong_price": 21176, "jeonse_ratio": null,
+    "deal": [
+      {"size_m2": 84, "price_eok": 72, "floor": null, "date": "2025-06-27", "type": "매매"},
+      {"size_m2": 133, "price_eok": 106, "floor": null, "date": "2025-12-01", "type": "매매"}
+    ],
+    "dev": "반포 재건축 대장(원베일리), 9호선·신반포역",
+    "source_urls": ["https://rt.molit.go.kr/", "https://news.nate.com/view/20251228n09333"]
+  }
+]

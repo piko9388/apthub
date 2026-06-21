@@ -332,6 +332,22 @@ def report_html(sigs, stats) -> str:
     return out
 
 
+def load_complex():
+    """data/complex/*.json — 단지 카탈로그(아파트 정보 탭). 제원·실거래 명시 등록 단지."""
+    out = []
+    cdir = ROOT / "data" / "complex"
+    if not cdir.exists():
+        return out
+    for f in sorted(cdir.glob("*.json")):
+        try:
+            arr = json.loads(f.read_text(encoding="utf-8"))
+            if isinstance(arr, list):
+                out += arr
+        except Exception:
+            continue
+    return out
+
+
 def build():
     sigs = load_all()
     # 두 트랙 분리: news(기사·정성) vs data(공식 지표·정량)
@@ -346,6 +362,7 @@ def build():
         "sig": [client_signal(s) for s in news],
         "met": [client_signal(s) for s in dat],
         "regions": region_agg(news),
+        "cat": load_complex(),
     }
     dates = sorted(s.date for s in news if s.date)
     def _ym(d):
@@ -576,6 +593,9 @@ TEMPLATE = r"""<!DOCTYPE html>
   .apt-l .ad{color:var(--muted);font-size:10.5px;font-variant-numeric:tabular-nums;margin-right:4px}
   .apt-l b{color:var(--navy)}
   .apt-j{font-size:11px;color:#2e7d52;margin-top:5px}
+  .aptcard.reg{border-color:var(--accent);background:#f7fafd}
+  .apt-spec{font-size:11.5px;color:var(--navy);font-weight:600;margin:4px 0 2px}
+  .apt-dev{font-size:11px;color:var(--accent);margin-top:6px}
   /* 월별 정리 */
   .lgd{font-size:11px;color:var(--muted)}
   .lr{color:var(--red);font-weight:600}.ly{color:var(--amber);font-weight:600}
@@ -699,7 +719,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 <script>
 var DATA = __DATA__;
 var PUBLIC = "__PUBLIC__" === "1";
-var SIG = DATA.sig, REG = DATA.regions, MET = DATA.met||[];
+var SIG = DATA.sig, REG = DATA.regions, MET = DATA.met||[], CATALOG = DATA.cat||[];
 var S = {view:"report", sido:null, gu:null, cat:"", trig:null, q:"", sort:"date_desc", wcat:""};
 var CAT={policy:"정책·세제",price:"시세·실거래",macro:"금리·거시",semicon:"반도체"};
 var CONF={"공식":"● 공식","언론":"◐ 언론","추정":"○ 추정"};
@@ -1043,36 +1063,68 @@ function buildCatalog(){
   });
   return Object.keys(by).map(function(k){return by[k];});
 }
+function derivedCard(o){
+  var sales=o.trades.filter(function(t){return !t.jeonse;}).sort(function(x,y){return (y.date||"").localeCompare(x.date||"");});
+  var jeon=o.trades.filter(function(t){return t.jeonse;});
+  var areas=[]; o.trades.forEach(function(t){ if(t.area&&areas.indexOf(Math.round(t.area))<0)areas.push(Math.round(t.area)); });
+  areas.sort(function(a,b){return a-b;});
+  var prices=sales.map(function(t){return t.price;});
+  var rng=prices.length?(prices.length>1?Math.min.apply(null,prices)+"~"+Math.max.apply(null,prices)+"억":prices[0]+"억"):"—";
+  var rows=sales.slice(0,4).map(function(t){
+    return '<li>'+(t.url?'<a href="'+esc(t.url)+'" target="_blank" rel="noopener">':'')
+      +'<span class="ad">'+esc(t.date||"")+'</span> 전용 '+t.area+'㎡ <b>'+t.price+'억</b>'
+      +(t.url?'</a>':'')+'</li>';
+  }).join("");
+  var jl=jeon.length?'<div class="apt-j">전세 '+jeon.length+'건 (최근 '+jeon[0].price+'억)</div>':'';
+  return '<div class="aptcard"><div class="apth"><b>'+esc(o.apt)+'</b>'
+    +'<span class="aptloc">'+esc(o.sido+" "+o.gu)+'</span></div>'
+    +'<div class="apt-m">전용 '+(areas.join("·")||"-")+'㎡ · 매매 '+sales.length+'건 · 시세 '+rng+'</div>'
+    +(rows?'<ul class="apt-l">'+rows+'</ul>':'')+jl+'</div>';
+}
+function regCard(c){
+  var spec=[];
+  if(c.households) spec.push(c.households.toLocaleString()+'세대');
+  if(c.built_year) spec.push(c.built_year+'년');
+  if(c.far) spec.push('용적률 '+c.far+'%');
+  if(c.pyeong_price) spec.push('평당 '+Number(c.pyeong_price).toLocaleString()+'만');
+  if(c.jeonse_ratio) spec.push('전세가율 '+c.jeonse_ratio+'%');
+  var sizes=(c.sizes_m2||[]).join("·");
+  var deals=(c.deal||[]).slice().sort(function(x,y){return (y.date||"").localeCompare(x.date||"");});
+  var url=(c.source_urls||[])[0]||"";
+  var rows=deals.slice(0,5).map(function(d){
+    return '<li>'+(url?'<a href="'+esc(url)+'" target="_blank" rel="noopener">':'')
+      +'<span class="ad">'+esc(d.date||"")+'</span> 전용 '+d.size_m2+'㎡ <b>'+d.price_eok+'억</b> '+esc(d.type||"")
+      +(url?'</a>':'')+'</li>';
+  }).join("");
+  return '<div class="aptcard reg"><div class="apth"><b>'+esc(c.complex)+'</b>'
+    +'<span class="aptloc">'+esc((c.sido||"")+" "+(c.gu||"")+(c.dong?" "+c.dong:""))+'</span></div>'
+    +(spec.length?'<div class="apt-spec">'+spec.join(" · ")+'</div>':'')
+    +(sizes?'<div class="apt-m">평형 전용 '+esc(sizes)+'㎡</div>':'')
+    +(rows?'<ul class="apt-l">'+rows+'</ul>':'')
+    +(c.dev?'<div class="apt-dev">🏗 '+esc(c.dev)+'</div>':'')+'</div>';
+}
 function renderApt(){
   var host=document.getElementById("view-apt");
-  var cat=buildCatalog();
-  if(S.q) cat=cat.filter(function(o){return (o.apt+o.sido+o.gu).toLowerCase().indexOf(S.q)>=0;});
-  // 거래 많은 단지 우선
-  cat.sort(function(a,b){return b.trades.length-a.trades.length;});
-  var CAP=80, shown=cat.slice(0,CAP);
-  var h='<div class="lead">아파트 정보 — 실거래 시그널에서 자동 추출한 단지 카탈로그('+cat.length+'단지)'
+  var norm=function(s){return (s||"").replace(/\s/g,"").toLowerCase();};
+  var reg=CATALOG.slice();
+  var regKey={}; reg.forEach(function(c){ regKey[c.sido+"|"+c.gu+"|"+norm(c.complex)]=1; });
+  var der=buildCatalog().filter(function(o){return !regKey[o.sido+"|"+o.gu+"|"+norm(o.apt)];});
+  if(S.q){ reg=reg.filter(function(c){return (c.complex+c.sido+c.gu).toLowerCase().indexOf(S.q)>=0;});
+    der=der.filter(function(o){return (o.apt+o.sido+o.gu).toLowerCase().indexOf(S.q)>=0;}); }
+  der.sort(function(a,b){return b.trades.length-a.trades.length;});
+  var CAP=80, shown=der.slice(0,CAP);
+  var h='<div class="lead">아파트 정보 — 등록 단지 '+CATALOG.length+'개(제원 포함) · 실거래 추출 '+der.length+'단지'
     +' · 매매/전세 최근순. 단지 클릭 시 원문.</div>';
-  if(!shown.length){ host.innerHTML=h+'<div class="empty">단지가 없습니다. 검색어를 바꿔보세요.</div>'; return; }
-  h+='<div class="aptgrid">';
-  shown.forEach(function(o){
-    var sales=o.trades.filter(function(t){return !t.jeonse;}).sort(function(x,y){return (y.date||"").localeCompare(x.date||"");});
-    var jeon=o.trades.filter(function(t){return t.jeonse;});
-    var areas=[]; o.trades.forEach(function(t){ if(t.area&&areas.indexOf(Math.round(t.area))<0)areas.push(Math.round(t.area)); });
-    areas.sort(function(a,b){return a-b;});
-    var prices=sales.map(function(t){return t.price;});
-    var rng=prices.length?(prices.length>1?Math.min.apply(null,prices)+"~"+Math.max.apply(null,prices)+"억":prices[0]+"억"):"—";
-    var rows=sales.slice(0,4).map(function(t){
-      return '<li>'+(t.url?'<a href="'+esc(t.url)+'" target="_blank" rel="noopener">':'')
-        +'<span class="ad">'+esc(t.date||"")+'</span> 전용 '+t.area+'㎡ <b>'+t.price+'억</b>'
-        +(t.url?'</a>':'')+'</li>';
-    }).join("");
-    var jl=jeon.length?'<div class="apt-j">전세 '+jeon.length+'건 (최근 '+jeon[0].price+'억)</div>':'';
-    h+='<div class="aptcard"><div class="apth"><b>'+esc(o.apt)+'</b>'
-      +'<span class="aptloc">'+esc(o.sido+" "+o.gu)+'</span></div>'
-      +'<div class="apt-m">전용 '+(areas.join("·")||"-")+'㎡ · 매매 '+sales.length+'건 · 시세 '+rng+'</div>'
-      +(rows?'<ul class="apt-l">'+rows+'</ul>':'')+jl+'</div>';
-  });
-  h+='</div>'+(cat.length>CAP?'<p class="rdisc">상위 '+CAP+'단지 표시 · 검색으로 좁히기 가능.</p>':'');
+  if(reg.length){
+    h+='<h2 class="bsec">등록 단지 (제원 포함)</h2><div class="aptgrid">'
+      +reg.map(regCard).join("")+'</div>';
+  }
+  if(shown.length){
+    h+='<h2 class="bsec">실거래 추출 단지</h2><div class="aptgrid">'
+      +shown.map(derivedCard).join("")+'</div>'
+      +(der.length>CAP?'<p class="rdisc">상위 '+CAP+'단지 표시 · 검색으로 좁히기 · 더 많은 제원은 <code>scripts/apthub_official_apis.py --complex</code>로 생성.</p>':'');
+  }
+  if(!reg.length && !shown.length) h+='<div class="empty">단지가 없습니다. 검색어를 바꿔보세요.</div>';
   host.innerHTML=h;
 }
 
