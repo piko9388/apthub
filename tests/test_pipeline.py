@@ -17,9 +17,13 @@ def test_normalize_date():
 
 
 def test_id_dedup():
+    # 같은 URL+제목 → 같은 id(진짜 중복)
     a = Signal(title="제목", source="s", url="https://x/a")
-    b = Signal(title="다른 제목", source="s", url="https://x/a")
-    assert a.id == b.id  # 같은 URL → 같은 id
+    b = Signal(title="제목", source="s", url="https://x/a")
+    assert a.id == b.id
+    # 같은 URL이라도 제목이 다르면 다른 id(집계사이트 공유 URL의 서로 다른 거래 보존)
+    c = Signal(title="다른 제목", source="s", url="https://x/a")
+    assert a.id != c.id
 
 
 def test_enrich_red_trigger_dsr():
