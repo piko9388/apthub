@@ -27,16 +27,21 @@ def normalize_date(value: str | None) -> Optional[str]:
     if not value:
         return None
     s = value.strip()
-    # 이미 ISO 형태면 앞 10자
-    m = re.match(r"(\d{4})[-./](\d{1,2})[-./](\d{1,2})", s)
+
+    def _ok(y, mo, d):
+        try:
+            import datetime as _dt
+            _dt.date(int(y), int(mo), int(d))           # 월/일 범위 검증
+            return f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
+        except ValueError:
+            return None
+
+    m = re.match(r"(\d{4})[-./](\d{1,2})[-./](\d{1,2})", s)        # ISO 형태
     if m:
-        y, mo, d = m.groups()
-        return f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
-    # 2026년 6월 19일 형태
-    m = re.match(r"(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일", s)
+        return _ok(*m.groups())
+    m = re.match(r"(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일", s)  # 2026년 6월 19일
     if m:
-        y, mo, d = m.groups()
-        return f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
+        return _ok(*m.groups())
     return None
 
 

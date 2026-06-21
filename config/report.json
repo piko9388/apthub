@@ -1,5 +1,5 @@
 {
-  "title": "APT·SIGNAL — 수도권 부동산 동향 브리핑",
+  "title": "APT-SIGNAL — 수도권 부동산 동향 브리핑",
   "asof": "{period} 누적 {total}건(🔴 {reds}) 분석 · 업데이트 {updated}",
   "sections": [
     {
