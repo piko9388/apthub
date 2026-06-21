@@ -257,8 +257,17 @@ def report_html(sigs, stats) -> str:
     out = (f'<div class="rep-head"><h2>{html.escape(rep["title"])}</h2>'
            f'<div class="asof">{rep["asof"]}</div></div>')
     for sec in rep["sections"]:
-        out += f'<section class="rsec"><h3>{html.escape(sec["h"])}</h3>'
-        if sec["type"] == "bullets":
+        when = f'<span class="when">{html.escape(sec["when"])}</span>' if sec.get("when") else ""
+        out += f'<section class="rsec"><h3>{html.escape(sec["h"])}{when}</h3>'
+        t = sec.get("type", "para")
+        if t == "table":
+            cols = "".join(f"<th>{html.escape(c)}</th>" for c in sec["columns"])
+            body = ""
+            for row in sec["rows"]:
+                body += "<tr>" + "".join(f"<td>{c}</td>" for c in row) + "</tr>"
+            out += (f'<div class="tw"><table class="rt"><thead><tr>{cols}</tr></thead>'
+                    f'<tbody>{body}</tbody></table></div>')
+        elif t == "bullets":
             out += "<ul>" + "".join(f"<li>{it}</li>" for it in sec["items"]) + "</ul>"
         else:
             out += "".join(f'<p class="rp">{it}</p>' for it in sec["items"])
@@ -278,9 +287,13 @@ def build():
         "sig": [client_signal(s) for s in sigs],
         "regions": region_agg(sigs),
     }
+    dates = sorted(s.date for s in sigs if s.date)
+    def _ym(d):
+        return f"{d[:4]}.{int(d[5:7])}" if d else ""
+    period = f"{_ym(dates[0])}~{_ym(dates[-1])}" if dates else ""
     stats = {
         "total": len(sigs), "reds": reds, "yellows": yellows,
-        "updated": data["updated"],
+        "updated": data["updated"], "period": period,
         "seoul_med": _sido_median(sigs, "서울"),
         "gg_med": _sido_median(sigs, "경기"),
         "ic_med": _sido_median(sigs, "인천"),
@@ -307,7 +320,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>m-SIGNAL · 수도권 부동산 동향</title>
+<title>APT·SIGNAL · 수도권 부동산 동향</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
@@ -379,13 +392,37 @@ TEMPLATE = r"""<!DOCTYPE html>
   .rep-head .asof{font-size:12px;color:var(--muted)}
   .rsec{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
     padding:14px 17px;margin-bottom:11px;box-shadow:var(--shadow)}
-  .rsec h3{margin:0 0 9px;font-size:15.5px;color:var(--accent);letter-spacing:-.2px}
+  .rsec h3{margin:0 0 9px;font-size:15.5px;color:var(--accent);letter-spacing:-.2px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .rsec h3 .when{font-size:11px;font-weight:400;color:var(--muted)}
+  .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table.rt{border-collapse:collapse;width:100%;font-size:12.5px;min-width:0}
+  table.rt th{background:#f4f6f9;color:var(--navy2);text-align:left;padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap;font-size:11.5px}
+  table.rt td{padding:7px 10px;border-bottom:1px solid #f0f2f5;color:var(--navy2);vertical-align:top}
+  table.rt td:first-child{white-space:nowrap;font-weight:600;color:var(--navy)}
+  table.rt tr:last-child td{border-bottom:none}
+  table.rt b{color:var(--navy)}
   .rsec ul{margin:0;padding-left:18px}
   .rsec li{font-size:13.5px;color:var(--navy2);padding:3px 0;line-height:1.6}
   .rsec .rp{margin:0 0 8px;font-size:13.5px;color:var(--navy2);line-height:1.65}
   .rsec .rp:last-child{margin-bottom:0}
   .rsec b{color:var(--navy)}
   .rdisc{font-size:11px;color:var(--muted);margin:6px 2px 0;line-height:1.5}
+  /* 주간 정리 */
+  .wk{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 15px;margin-bottom:9px;box-shadow:var(--shadow)}
+  .wkh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .wkh b{font-size:14px;font-variant-numeric:tabular-nums}
+  .wkn{font-size:11.5px;color:var(--muted)}
+  .wkc{font-size:11.5px;color:var(--accent);margin:5px 0 2px}
+  .wkl{list-style:none;margin:7px 0 0;padding:0}
+  .wkl li{font-size:12.5px;color:var(--navy2);padding:4px 0;border-top:1px solid #f3f5f7;line-height:1.5}
+  .wkl li:first-child{border-top:none}
+  .wkl .d{color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;margin-right:3px}
+  .wkl .wb{font-size:10px;margin-right:3px}
+  .wkl .loc2{font-size:10.5px;color:var(--accent);background:#eef2f7;border-radius:4px;padding:0 5px}
+  .wkl .more{color:var(--muted);font-style:italic}
+  .wkempty{font-size:12px;color:var(--muted);margin-top:6px}
+  .ftr{margin-top:24px;padding-top:14px;border-top:1px solid var(--border);text-align:center;font-size:11.5px;color:var(--muted);line-height:1.7}
+  .ftr a{color:var(--accent);text-decoration:none}.ftr b{color:var(--navy2)}
   @media(min-width:721px){.rsec{padding:16px 20px}}
   .lead{font-size:12.5px;color:var(--muted);margin:4px 2px 12px}
   .dgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px}
@@ -403,24 +440,34 @@ TEMPLATE = r"""<!DOCTYPE html>
   @media(max-width:820px){
     aside{transform:translateX(-100%);transition:transform .2s;box-shadow:0 0 40px rgba(0,0,0,.2)}
     aside.open{transform:none}
-    main{margin-left:0}
+    main{margin-left:0;padding:12px 12px 60px}
     #burger{display:block}
     .backdrop.on{display:block;position:fixed;inset:56px 0 0 0;background:rgba(0,0,0,.3);z-index:850}
+  }
+  @media(max-width:560px){
+    header{gap:8px;padding:0 10px}
+    header h1{font-size:15px}
+    .stat{display:none}
+    #q{margin-left:0;min-width:0}
+    .rep-head h2{font-size:17px}
+    #map{height:260px}
+    .toolbar{gap:6px}
   }
 </style>
 </head>
 <body>
 <header>
   <button id="burger" aria-label="menu">☰</button>
-  <h1>m-SIGNAL</h1>
+  <h1>APT·SIGNAL</h1>
   <span class="stat" id="hstat"></span>
-  <input id="q" type="search" placeholder="🔍 검색 — 단지·지역·키워드·출처">
+  <input id="q" type="search" placeholder="🔍 검색 — 단지·지역·키워드">
 </header>
 <div class="backdrop" id="backdrop"></div>
 <aside id="side"></aside>
 <main>
   <div class="crumb" id="crumb"></div>
   <div class="panel" id="view-report">__REPORT__</div>
+  <div class="panel" id="view-weekly"></div>
   <div id="view-list" style="display:none">
     <div id="map"></div>
     <div class="maphint" id="maphint">지도 마커: 시군구별 시그널(크기=건수, 색=매매중위). 클릭 시 해당 지역만.</div>
@@ -445,6 +492,8 @@ TEMPLATE = r"""<!DOCTYPE html>
   </div>
   <div class="panel" id="view-frames">__FRAMES__</div>
   <div class="panel" id="view-personal">__PERSONAL__</div>
+  <footer class="ftr">APT·SIGNAL · 수도권 부동산 정책·시장 동향 — 공개 기사·실거래 시그널 요약·분석(참고용)<br>
+    제작·문의 <b>이정훈</b> · <a href="mailto:piko9388@gmail.com">piko9388@gmail.com</a></footer>
 </main>
 
 <script>
@@ -473,6 +522,7 @@ function buildSidebar(){
   Object.keys(gus).forEach(function(k){gus[k].sort();});
   var h='<div class="navsec"><div class="navttl">보기</div>';
   h+=navrow("📋 동향 리포트","__view_report",S.view==="report");
+  h+=navrow("🗓 주간 정리","__view_weekly",S.view==="weekly");
   h+=navrow("🗂 리스트·지도","__view_list",S.view==="list");
   h+=navrow("부읽남 참고","__view_frames",S.view==="frames");
   if(!PUBLIC) h+=navrow("개인 맞춤(정훈)","__view_personal",S.view==="personal");
@@ -506,6 +556,7 @@ function buildSidebar(){
     el.onclick=function(){ var k=el.getAttribute("data-key");
       if(k==="all"){S.sido=null;S.gu=null;S.view="list";}
       else if(k==="__view_report"){S.view="report";}
+      else if(k==="__view_weekly"){S.view="weekly";}
       else if(k==="__view_list"){S.view="list";}
       else if(k==="__view_frames"){S.view="frames";}
       else if(k==="__view_personal"){S.view="personal";}
@@ -600,18 +651,53 @@ function renderMap(){
   if(rs.length){ try{ var g=L.featureGroup(layer.getLayers()); map.fitBounds(g.getBounds().pad(0.15)); }catch(e){} }
 }
 
+/* ---------- 주간 정리 ---------- */
+function mondayOf(ds){var d=new Date(ds+"T00:00:00");if(isNaN(d))return ds;var w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return d.toISOString().slice(0,10);}
+function addDays(ds,n){var d=new Date(ds+"T00:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);}
+function renderWeekly(){
+  var g={};
+  SIG.forEach(function(s){ if(!s.date)return; var k=mondayOf(s.date); (g[k]=g[k]||[]).push(s); });
+  var weeks=Object.keys(g).sort().reverse();
+  var CAP=26, shown=weeks.slice(0,CAP);
+  var h='<div class="lead">주(월~일)별 시그널 요약 — 최신순'+(weeks.length>CAP?(" · 최근 "+CAP+"주 표시"):"")+'</div>';
+  shown.forEach(function(mon){
+    var arr=g[mon].slice().sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});
+    var reds=arr.filter(function(s){return s.trig==="red";});
+    var yel=arr.filter(function(s){return s.trig==="yellow";});
+    var byc={}; arr.forEach(function(s){byc[s.cat]=(byc[s.cat]||0)+1;});
+    var chips=Object.keys(byc).map(function(c){return (CAT[c]||c)+" "+byc[c];}).join(" · ");
+    var top=reds.concat(yel).slice(0,8).map(function(s){
+      return '<li><span class="wb '+s.trig+'">'+(s.trig==="red"?"🔴":"🟡")+'</span>'
+        +'<span class="d">'+esc(s.date)+'</span> '+esc(s.title)
+        +(s.gu?' <span class="loc2">'+esc(s.sido+" "+s.gu)+'</span>':'')+'</li>';
+    }).join("");
+    var more=(reds.length+yel.length>8)?'<li class="more">그 외 트리거 '+(reds.length+yel.length-8)+'건…</li>':'';
+    h+='<section class="wk"><div class="wkh"><b>'+mon+' ~ '+addDays(mon,6)+'</b>'
+      +'<span class="wkn">'+arr.length+'건 · 🔴'+reds.length+' · 🟡'+yel.length+'</span></div>'
+      +(chips?'<div class="wkc">'+chips+'</div>':'')
+      +(top?'<ul class="wkl">'+top+more+'</ul>':'<div class="wkempty">트리거 없음 · 일반 시그널 '+arr.length+'건</div>')
+      +'</section>';
+  });
+  document.getElementById("view-weekly").innerHTML=h;
+}
+
 /* ---------- 렌더 ---------- */
 function render(){
   buildSidebar();
   document.getElementById("view-list").style.display=S.view==="list"?"block":"none";
   document.getElementById("view-report").classList.toggle("on",S.view==="report");
+  document.getElementById("view-weekly").classList.toggle("on",S.view==="weekly");
   document.getElementById("view-frames").classList.toggle("on",S.view==="frames");
   document.getElementById("view-personal").classList.toggle("on",S.view==="personal");
   if(S.view==="list"){ renderCrumb(); renderList(); renderMap();
     setTimeout(function(){ if(map) map.invalidateSize(); },50); }
-  else { document.getElementById("crumb").innerHTML=
-    (S.view==="report"?"종합 동향 브리핑 — 기사 요약·분석"
-    :S.view==="frames"?"부읽남 38강 판단 프레임":"개인 맞춤(정훈) — 보조"); }
+  else {
+    if(S.view==="weekly") renderWeekly();
+    document.getElementById("crumb").innerHTML=
+      (S.view==="report"?"종합 동향 브리핑 — 기사 요약·분석"
+      :S.view==="weekly"?"주차별 정리 — 주(월~일)별 시그널 요약"
+      :S.view==="frames"?"부읽남 38강 판단 프레임":"개인 맞춤(정훈) — 보조");
+  }
 }
 
 /* ---------- 이벤트 ---------- */
