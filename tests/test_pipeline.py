@@ -127,6 +127,17 @@ def test_data_kind_and_price_excluded():
     assert 28.5 in B.parse_sale_prices(n)
 
 
+def test_segment_bands_roundtrip():
+    # 가격대·면적대 밴드 + 평당가·세대수가 적재 왕복에서 보존
+    s = Signal.from_dict({"kind": "data", "title": "서울 60-85㎡ 매매변동률", "source": "부동산원",
+                          "category": "price", "metric": "매매가격지수 변동률", "value": 0.8, "unit": "%",
+                          "sido": "서울", "area_band": "60-85", "price_band": "9-15",
+                          "pyeong_price": 6350, "households": 1140})
+    d = s.to_dict()
+    assert s.kind == "data" and d["area_band"] == "60-85" and d["price_band"] == "9-15"
+    assert d["pyeong_price"] == 6350.0 and d["households"] == 1140
+
+
 def test_daily_surfaces_semicon():
     # 정책 🔴가 많아도 반도체(🟡)가 Top3 에서 사라지지 않아야 함.
     sigs = [

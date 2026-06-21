@@ -69,6 +69,11 @@ class Signal:
     metric: str = ""                      # 지표명(예: '매매가격지수 변동률','기준금리','거래량')
     value: Optional[float] = None         # 지표 값(부호 포함)
     unit: str = ""                        # 단위(%, 건, 호, 조원 …)
+    # 세그먼트(가격대·면적대 밴드 분리관리용) — 비면 전체
+    area_band: str = ""                   # 40이하|40-60|60-85|85-130|130초과 (전용㎡)
+    price_band: str = ""                  # 6억이하|6-9|9-15|15-25|25초과 또는 1~5분위
+    pyeong_price: Optional[float] = None  # 평당가(만원/3.3㎡)
+    households: Optional[int] = None      # 단지 세대수
     collected_at: str = field(default_factory=_now_kst_iso)
     id: str = ""
 

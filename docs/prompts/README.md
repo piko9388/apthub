@@ -9,6 +9,7 @@ python3 scripts/gen_reports.py        # 일/주간 리포트 재생성
 
 | 프롬프트 | 용도 | 트랙 |
 |---|---|---|
+| `max-data-crawl-prompt.md` | **MAX 데이터 수집** — 가격대·면적대 밴드+평당가·세대수+심리/전세가율/분양가/청약/거래량 + (선택)단지 카탈로그 | data |
 | `master-crawl-prompt.md` | **종합 크롤(RSS·Google News·공식)** — 수도권 부동산+직결 경제 전수 | news+data |
 | `source-gap-prompt.md` | **1차 출처 매칭·세그먼트 보강**(면적대/가격대/심리/PIR/분양가…) | data |
 | `../news-crawl-prompt.md` | 주차별 뉴스(탈자극 사실추출) | news |
