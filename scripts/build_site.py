@@ -320,7 +320,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
-<title>APT·SIGNAL · 수도권 부동산 동향</title>
+<title>APT-SIGNAL · 수도권 부동산 동향</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
@@ -337,8 +337,9 @@ TEMPLATE = r"""<!DOCTYPE html>
   /* 헤더 */
   header{position:fixed;top:0;left:0;right:0;height:56px;background:var(--navy);color:#fff;
     display:flex;align-items:center;gap:12px;padding:0 16px;z-index:1000}
-  header h1{font-size:16px;margin:0;letter-spacing:-.3px;white-space:nowrap}
-  header .stat{font-size:12px;color:#b9c4d6}
+  header h1{font-size:16px;margin:0;letter-spacing:.2px;font-weight:700;white-space:nowrap}
+  header .tag{font-size:12px;color:#9fb0c6;white-space:nowrap}
+  header .stat{font-size:12px;color:#b9c4d6;margin-left:6px}
   #q{flex:1;max-width:520px;margin-left:auto;border:none;border-radius:999px;padding:9px 14px;font-size:13px;font-family:inherit;outline:none}
   #burger{display:none;background:none;border:none;color:#fff;font-size:20px;cursor:pointer}
   /* 좌측 메뉴 */
@@ -447,7 +448,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   @media(max-width:560px){
     header{gap:8px;padding:0 10px}
     header h1{font-size:15px}
-    .stat{display:none}
+    .stat,.tag{display:none}
     #q{margin-left:0;min-width:0}
     .rep-head h2{font-size:17px}
     #map{height:260px}
@@ -458,7 +459,8 @@ TEMPLATE = r"""<!DOCTYPE html>
 <body>
 <header>
   <button id="burger" aria-label="menu">☰</button>
-  <h1>APT·SIGNAL</h1>
+  <h1>APT-SIGNAL</h1>
+  <span class="tag">수도권 부동산 동향</span>
   <span class="stat" id="hstat"></span>
   <input id="q" type="search" placeholder="🔍 검색 — 단지·지역·키워드">
 </header>
@@ -492,7 +494,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   </div>
   <div class="panel" id="view-frames">__FRAMES__</div>
   <div class="panel" id="view-personal">__PERSONAL__</div>
-  <footer class="ftr">APT·SIGNAL · 수도권 부동산 정책·시장 동향 — 공개 기사·실거래 시그널 요약·분석(참고용)<br>
+  <footer class="ftr">APT-SIGNAL · 수도권 부동산 정책·시장 동향 — 공개 기사·실거래 시그널 요약·분석(참고용)<br>
     제작·문의 <b>이정훈</b> · <a href="mailto:piko9388@gmail.com">piko9388@gmail.com</a></footer>
 </main>
 
