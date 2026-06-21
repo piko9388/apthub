@@ -238,6 +238,35 @@ def frames_html() -> str:
     return out
 
 
+def _sido_median(sigs, sido) -> str:
+    ps = []
+    for s in sigs:
+        if (s.sido or "전국") == sido:
+            ps += parse_sale_prices(s)
+    return f"{round(median(ps), 1)}" if ps else "—"
+
+
+def report_html(sigs, stats) -> str:
+    path = ROOT / "config" / "report.json"
+    if not path.exists():
+        return ""
+    raw = path.read_text(encoding="utf-8")
+    for k, v in stats.items():
+        raw = raw.replace("{" + k + "}", str(v))
+    rep = json.loads(raw)
+    out = (f'<div class="rep-head"><h2>{html.escape(rep["title"])}</h2>'
+           f'<div class="asof">{rep["asof"]}</div></div>')
+    for sec in rep["sections"]:
+        out += f'<section class="rsec"><h3>{html.escape(sec["h"])}</h3>'
+        if sec["type"] == "bullets":
+            out += "<ul>" + "".join(f"<li>{it}</li>" for it in sec["items"]) + "</ul>"
+        else:
+            out += "".join(f'<p class="rp">{it}</p>' for it in sec["items"])
+        out += "</section>"
+    out += f'<p class="rdisc">{html.escape(rep.get("disclaimer", ""))}</p>'
+    return out
+
+
 def build():
     sigs = load_all()
     reds = sum(1 for s in sigs if s.trigger == "red")
@@ -249,9 +278,17 @@ def build():
         "sig": [client_signal(s) for s in sigs],
         "regions": region_agg(sigs),
     }
+    stats = {
+        "total": len(sigs), "reds": reds, "yellows": yellows,
+        "updated": data["updated"],
+        "seoul_med": _sido_median(sigs, "서울"),
+        "gg_med": _sido_median(sigs, "경기"),
+        "ic_med": _sido_median(sigs, "인천"),
+    }
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     doc = (TEMPLATE
            .replace("__DATA__", blob)
+           .replace("__REPORT__", report_html(sigs, stats))
            .replace("__PERSONAL__", personal_html(sigs))
            .replace("__FRAMES__", frames_html())
            .replace("__PUBLIC__", "1" if PUBLIC_ONLY else "0"))
@@ -336,6 +373,20 @@ TEMPLATE = r"""<!DOCTYPE html>
   .empty{text-align:center;color:var(--muted);padding:40px 0}
   /* 패널(부읽남/개인) */
   .panel{display:none}.panel.on{display:block}
+  /* 동향 리포트 */
+  .rep-head{margin:2px 2px 14px}
+  .rep-head h2{margin:0 0 4px;font-size:20px;letter-spacing:-.4px}
+  .rep-head .asof{font-size:12px;color:var(--muted)}
+  .rsec{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:14px 17px;margin-bottom:11px;box-shadow:var(--shadow)}
+  .rsec h3{margin:0 0 9px;font-size:15.5px;color:var(--accent);letter-spacing:-.2px}
+  .rsec ul{margin:0;padding-left:18px}
+  .rsec li{font-size:13.5px;color:var(--navy2);padding:3px 0;line-height:1.6}
+  .rsec .rp{margin:0 0 8px;font-size:13.5px;color:var(--navy2);line-height:1.65}
+  .rsec .rp:last-child{margin-bottom:0}
+  .rsec b{color:var(--navy)}
+  .rdisc{font-size:11px;color:var(--muted);margin:6px 2px 0;line-height:1.5}
+  @media(min-width:721px){.rsec{padding:16px 20px}}
   .lead{font-size:12.5px;color:var(--muted);margin:4px 2px 12px}
   .dgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px}
   @media(max-width:620px){.dgrid{grid-template-columns:1fr}}
@@ -369,7 +420,8 @@ TEMPLATE = r"""<!DOCTYPE html>
 <aside id="side"></aside>
 <main>
   <div class="crumb" id="crumb"></div>
-  <div id="view-list">
+  <div class="panel" id="view-report">__REPORT__</div>
+  <div id="view-list" style="display:none">
     <div id="map"></div>
     <div class="maphint" id="maphint">지도 마커: 시군구별 시그널(크기=건수, 색=매매중위). 클릭 시 해당 지역만.</div>
     <div class="toolbar">
@@ -399,7 +451,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 var DATA = __DATA__;
 var PUBLIC = "__PUBLIC__" === "1";
 var SIG = DATA.sig, REG = DATA.regions;
-var S = {view:"list", sido:null, gu:null, cat:"", trig:null, q:"", sort:"date_desc"};
+var S = {view:"report", sido:null, gu:null, cat:"", trig:null, q:"", sort:"date_desc"};
 var CAT={policy:"정책·세제",price:"시세·실거래",macro:"금리·거시",semicon:"반도체·소득"};
 var CONF={"공식":"● 공식","언론":"◐ 언론","추정":"○ 추정"};
 function esc(s){return (s||"").replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
@@ -420,7 +472,8 @@ function buildSidebar(){
   REG.forEach(function(r){ (gus[r.sido]=gus[r.sido]||[]).push(r.gu); });
   Object.keys(gus).forEach(function(k){gus[k].sort();});
   var h='<div class="navsec"><div class="navttl">보기</div>';
-  h+=navrow("뷰: 리스트·지도","__view_list",S.view==="list");
+  h+=navrow("📋 동향 리포트","__view_report",S.view==="report");
+  h+=navrow("🗂 리스트·지도","__view_list",S.view==="list");
   h+=navrow("부읽남 참고","__view_frames",S.view==="frames");
   if(!PUBLIC) h+=navrow("개인 맞춤(정훈)","__view_personal",S.view==="personal");
   h+='</div><div class="navsec"><div class="navttl">지역 드릴다운</div>';
@@ -452,6 +505,7 @@ function buildSidebar(){
   side.querySelectorAll('[data-key]').forEach(function(el){
     el.onclick=function(){ var k=el.getAttribute("data-key");
       if(k==="all"){S.sido=null;S.gu=null;S.view="list";}
+      else if(k==="__view_report"){S.view="report";}
       else if(k==="__view_list"){S.view="list";}
       else if(k==="__view_frames"){S.view="frames";}
       else if(k==="__view_personal"){S.view="personal";}
@@ -550,12 +604,14 @@ function renderMap(){
 function render(){
   buildSidebar();
   document.getElementById("view-list").style.display=S.view==="list"?"block":"none";
+  document.getElementById("view-report").classList.toggle("on",S.view==="report");
   document.getElementById("view-frames").classList.toggle("on",S.view==="frames");
   document.getElementById("view-personal").classList.toggle("on",S.view==="personal");
   if(S.view==="list"){ renderCrumb(); renderList(); renderMap();
     setTimeout(function(){ if(map) map.invalidateSize(); },50); }
   else { document.getElementById("crumb").innerHTML=
-    (S.view==="frames"?"부읽남 38강 판단 프레임":"개인 맞춤(정훈) — 보조"); }
+    (S.view==="report"?"종합 동향 브리핑 — 기사 요약·분석"
+    :S.view==="frames"?"부읽남 38강 판단 프레임":"개인 맞춤(정훈) — 보조"); }
 }
 
 /* ---------- 이벤트 ---------- */
