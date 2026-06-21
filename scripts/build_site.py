@@ -260,42 +260,43 @@ def _sido_median(sigs, sido) -> str:
     return f"{round(median(ps), 1)}" if ps else "—"
 
 
-def year_split_html(sigs) -> str:
-    """종합 동향 상단 — 연도별(2025/2026) 좌우 흐름 카드."""
-    years = ("2025", "2026")
-    cols = []
-    for y in years:
-        ys = [s for s in sigs if (s.date or "").startswith(y)]
-        if not ys:
+def category_board_html(sigs, reviews) -> str:
+    """종합 동향 상단 — 분야별 분석 보드(건수+연도분할+한줄 리뷰+대표 트리거)."""
+    order = [("policy", "정책·세제"), ("price", "시세·실거래"),
+             ("macro", "금리·거시"), ("semicon", "반도체")]
+    rank = {"red": 0, "yellow": 1, "none": 2}
+    cards = []
+    for key, lbl in order:
+        cs = [s for s in sigs if s.category == key]
+        if not cs:
             continue
-        reds = sum(1 for s in ys if s.trigger == "red")
-        yel = sum(1 for s in ys if s.trigger == "yellow")
-        cc = {}
-        for s in ys:
-            cc[s.category or "기타"] = cc.get(s.category or "기타", 0) + 1
-        chips = "".join(
-            f'<span class="ycat">{html.escape(CAT_LABEL.get(k, k))} {v}</span>'
-            for k, v in sorted(cc.items(), key=lambda kv: -kv[1]))
-        # 대표 트리거/헤드라인 (최신 🔴→🟡 순)
-        rank = {"red": 0, "yellow": 1, "none": 2}
-        top = sorted(ys, key=lambda s: (rank.get(s.trigger, 2), s.date or ""), reverse=False)
-        top = [s for s in top if s.trigger in ("red", "yellow")][:5]
+        y25 = sum(1 for s in cs if (s.date or "").startswith("2025"))
+        y26 = sum(1 for s in cs if (s.date or "").startswith("2026"))
+        reds = sum(1 for s in cs if s.trigger == "red")
+        review = reviews.get(key, "")
+        # 대표 시그널 2건 — 🔴 우선, 그다음 최신
+        top = sorted(cs, key=lambda s: (rank.get(s.trigger, 2), _neg_date(s.date)))[:2]
         lis = "".join(
-            f'<li><span class="yb">{"🔴" if s.trigger=="red" else "🟡"}</span>'
-            f'<span class="yd">{html.escape((s.date or "")[5:])}</span> '
+            f'<li><span class="yb">{"🔴" if s.trigger=="red" else ("🟡" if s.trigger=="yellow" else "·")}</span>'
             + (f'<a href="{html.escape(s.url)}" target="_blank" rel="noopener">{html.escape(s.title)}</a>'
                if s.url else html.escape(s.title)) + '</li>'
             for s in top)
-        cols.append(
-            f'<div class="ycol"><div class="yh"><b>{y}년</b>'
-            f'<span class="yn">{len(ys)}건 · <span class="lr">🔴 {reds}</span> · <span class="ly">🟡 {yel}</span></span></div>'
-            f'<div class="ychips">{chips}</div>'
-            + (f'<ul class="ylist">{lis}</ul>' if lis else '<div class="wkempty">주요 트리거 없음</div>')
+        cards.append(
+            f'<div class="cbcard"><div class="cbh"><b>{lbl}</b>'
+            f'<span class="cbn">{len(cs)}건 <i>(25:{y25}·26:{y26})</i>'
+            + (f' · <span class="lr">🔴 {reds}</span>' if reds else '') + '</span></div>'
+            + (f'<div class="cbrev">{html.escape(review)}</div>' if review else '')
+            + (f'<ul class="ylist">{lis}</ul>' if lis else '')
             + '</div>')
-    if not cols:
+    if not cards:
         return ""
-    return ('<section class="rsec"><h3>연도별 흐름</h3>'
-            '<div class="ygrid">' + "".join(cols) + '</div></section>')
+    return ('<section class="rsec"><h3>분야별 분석</h3>'
+            '<div class="cbgrid">' + "".join(cards) + '</div></section>')
+
+
+def _neg_date(d):
+    """최신 우선 정렬용 키(문자열 날짜를 역순)."""
+    return tuple(-int(x) for x in (d or "0000-00-00").replace("-", " ").split())
 
 
 def report_html(sigs, stats) -> str:
@@ -308,7 +309,7 @@ def report_html(sigs, stats) -> str:
     rep = json.loads(raw)
     out = (f'<div class="rep-head"><h2>{html.escape(rep["title"])}</h2>'
            f'<div class="asof">{rep["asof"]}</div></div>')
-    out += year_split_html(sigs)
+    out += category_board_html(sigs, rep.get("category_review", {}))
     for sec in rep["sections"]:
         when = f'<span class="when">{html.escape(sec["when"])}</span>' if sec.get("when") else ""
         out += f'<section class="rsec"><h3>{html.escape(sec["h"])}{when}</h3>'
@@ -441,6 +442,12 @@ TEMPLATE = r"""<!DOCTYPE html>
   .caret.open{transform:rotate(90deg)}
   /* 본문 */
   main{margin-left:var(--side);margin-top:56px;padding:14px 16px 60px;max-width:1100px}
+  .regbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+  .regbar .rchip{border:1px solid var(--border);background:var(--surface);color:var(--navy2);border-radius:8px;
+    padding:6px 13px;font-size:12.5px;cursor:pointer;font-family:inherit;font-weight:600}
+  .regbar .rchip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .regbar .rchip em{font-style:normal;font-weight:400;opacity:.7;margin-left:4px;font-size:11px}
+  .tbl{font-size:11px;color:var(--muted);font-weight:600;margin-right:2px}
   .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
   .chip{border:1px solid var(--border);background:var(--surface);color:var(--navy2);border-radius:999px;
     padding:6px 12px;font-size:12.5px;cursor:pointer;font-family:inherit}
@@ -493,15 +500,14 @@ TEMPLATE = r"""<!DOCTYPE html>
   .guide ul{margin:10px 0 12px;padding-left:18px}
   .guide li{font-size:12.5px;color:var(--navy2);padding:3px 0;line-height:1.55}
   .guide b{color:var(--navy)}
-  /* 연도별 흐름 */
-  .ygrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-  @media(max-width:560px){.ygrid{grid-template-columns:1fr}}
-  .ycol{border:1px solid var(--border);border-radius:10px;padding:11px 13px;background:#fbfcfd}
-  .yh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:7px}
-  .yh b{font-size:15px;color:var(--navy)}
-  .yn{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
-  .ychips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px}
-  .ycat{font-size:10.5px;color:var(--navy2);background:#eef1f5;border-radius:6px;padding:2px 7px}
+  /* 분야별 분석 보드 */
+  .cbgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  @media(max-width:620px){.cbgrid{grid-template-columns:1fr}}
+  .cbcard{border:1px solid var(--border);border-radius:10px;padding:11px 13px;background:#fbfcfd}
+  .cbh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:5px}
+  .cbh b{font-size:14px;color:var(--navy)}
+  .cbn{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}.cbn i{font-style:normal;opacity:.8}
+  .cbrev{font-size:12px;color:var(--navy2);line-height:1.5;margin:2px 0 7px;padding-left:9px;border-left:3px solid var(--accent)}
   .ylist{list-style:none;margin:0;padding:0}
   .ylist li{font-size:12px;color:var(--navy2);padding:3px 0;border-top:1px solid #f3f5f7;line-height:1.45}
   .ylist li:first-child{border-top:none}
@@ -544,7 +550,8 @@ TEMPLATE = r"""<!DOCTYPE html>
   .sp-zero{stroke:var(--border);stroke-width:1;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
   .recgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
   .rec{border:1px solid var(--border);border-radius:10px;padding:11px 13px;background:#fbfcfd}
-  .rec-h{font-size:13.5px;font-weight:700;color:var(--navy);margin-bottom:6px}
+  .rec-h{font-size:13.5px;font-weight:700;color:var(--navy);margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .rec-vol{font-size:11px;font-weight:400;color:var(--muted);font-variant-numeric:tabular-nums}
   .rec-b{font-size:12px;color:var(--navy2);margin:3px 0}
   .rec-i{display:inline-block;font-size:10px;font-weight:700;color:#fff;background:var(--accent);border-radius:5px;padding:1px 6px;margin-right:5px}
   .rec-i.news{background:#7a6a3a}
@@ -585,7 +592,8 @@ TEMPLATE = r"""<!DOCTYPE html>
   .ddh{font-size:11.5px;font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums}
   .ddn{font-weight:400;color:var(--muted);margin-left:4px}
   .wfbar{display:flex;flex-wrap:wrap;gap:6px;margin:0 2px 12px}
-  .wsum{font-size:12px;color:var(--navy2);margin:8px 0 2px;padding:7px 11px;background:#f3f6f9;border-radius:8px;line-height:1.5}
+  .wsum{font-size:12px;color:var(--navy2);margin:8px 0 2px;padding:8px 11px;background:#f3f6f9;border-radius:8px;line-height:1.7}
+  .wsb{display:inline-block;font-size:10px;font-weight:700;color:var(--accent);min-width:62px}
   .wtag{display:inline-block;font-size:9.5px;font-weight:600;border-radius:4px;padding:1px 5px;margin-right:5px;vertical-align:1px;
     background:#eef1f5;color:var(--navy2)}
   .wtag.policy{background:#eaf1f8;color:#2f5d8a}.wtag.price{background:#eaf3ee;color:#2e7d52}
@@ -641,7 +649,9 @@ TEMPLATE = r"""<!DOCTYPE html>
   <div id="view-list" style="display:none">
     <div id="map"></div>
     <div class="maphint" id="maphint">지도 마커: 시군구별 시그널(크기=건수, 색=매매중위). 클릭 시 해당 지역만.</div>
+    <div class="regbar" id="regbar" aria-label="지역 토글"></div>
     <div class="toolbar">
+      <span class="tbl">분야</span>
       <button class="chip on" data-cat="">전체</button>
       <button class="chip" data-cat="policy">정책·세제</button>
       <button class="chip" data-cat="price">시세·실거래</button>
@@ -799,6 +809,18 @@ function renderList(){
       var g=el.getAttribute("data-gu"); S.gu=g||null; buildSidebar(); render(); };
   });
 }
+function renderRegbar(){
+  var rb=document.getElementById("regbar"); if(!rb) return;
+  var c=counts();
+  var regs=[["","전체 수도권",c.bySido["서울"]+c.bySido["경기"]+c.bySido["인천"]+(c.bySido["전국"]||0)],
+            ["서울","서울",c.bySido["서울"]||0],["경기","경기",c.bySido["경기"]||0],["인천","인천",c.bySido["인천"]||0]];
+  rb.innerHTML='<span class="tbl">지역</span>'+regs.map(function(r){
+    return '<button class="rchip'+((S.sido||"")===r[0]?" on":"")+'" data-sido="'+r[0]+'">'+r[1]+'<em>'+r[2]+'</em></button>';
+  }).join("");
+  rb.querySelectorAll(".rchip").forEach(function(b){
+    b.onclick=function(){ S.sido=b.getAttribute("data-sido")||null; S.gu=null; buildSidebar(); render(); };
+  });
+}
 function renderCrumb(){
   var loc=S.sido?(esc(S.sido)+(S.gu?' <i>›</i> '+esc(S.gu):"")):"전체 수도권";
   var n=filtered().length;
@@ -897,16 +919,17 @@ function reconcile(sido){
   var ln=newsLean(sido);
   var dir=idx&&idx.value!=null?(idx.value>0.1?"상승":idx.value<-0.1?"하락":"보합"):"지표 미수집";
   var lean=ln.hot>ln.cold+1?"과열 강조":ln.cold>ln.hot+1?"약세 강조":"중립";
+  // 지표와 뉴스를 한 문장으로 연결(따로 노는 느낌 제거)
+  var idxTxt=idx?('부동산원 매매지수 <b>'+fmtV(idx)+'</b>('+dir+')'):'지표 미수집';
+  var newsTxt='뉴스 '+ln.n+'건 중 과열어 '+ln.hot+'·약세어 '+ln.cold;
   var verdict;
-  if(dir==="지표 미수집") verdict='지표 수집 시 뉴스와 교차검증 — 현재는 뉴스 '+ln.n+'건 기준';
-  else if(dir==="상승"&&lean==="과열 강조") verdict='지표·뉴스 모두 상승 방향 — <b>일치</b>. 단 개별 신고가 헤드라인은 지수 흐름으로 재확인.';
-  else if((dir==="보합"||dir==="하락")&&lean==="과열 강조") verdict='지표는 '+dir+'인데 뉴스는 과열 강조 — <b>뉴스 과장 주의</b>.';
-  else if(dir==="상승"&&lean==="약세 강조") verdict='지표는 상승인데 뉴스는 약세 강조 — <b>뉴스 신중·관망 톤</b>.';
-  else verdict='지표 '+dir+' · 뉴스 '+lean+' — 큰 괴리 없음.';
-  return '<div class="rec"><div class="rec-h">'+esc(sido)+'</div>'
-    +'<div class="rec-b"><span class="rec-i">지표</span> 매매지수 <b>'+(idx?fmtV(idx):"—")+'</b>('+dir+')'
-    +(vol?' · 거래량 <b>'+Math.round(vol.value).toLocaleString()+'건</b>':'')+'</div>'
-    +'<div class="rec-b"><span class="rec-i news">뉴스</span> '+ln.n+'건 · 과열어 '+ln.hot+' / 약세어 '+ln.cold+'</div>'
+  if(dir==="지표 미수집") verdict=idxTxt+' → '+newsTxt+'. <b>공식 지표 보강 필요</b>(별도 크롤).';
+  else if(dir==="상승"&&lean==="과열 강조") verdict=idxTxt+'가 '+newsTxt+'의 과열 정서를 <b>뒷받침</b> — 방향 일치.';
+  else if((dir==="보합"||dir==="하락")&&lean==="과열 강조") verdict=idxTxt+'인데 '+newsTxt+' → <b>뉴스 과장 주의</b>(지표 우선).';
+  else if(dir==="상승"&&lean==="약세 강조") verdict=idxTxt+'인데 '+newsTxt+' → 뉴스가 <b>과도하게 신중</b>.';
+  else verdict=idxTxt+' · '+newsTxt+' — 큰 괴리 없음.';
+  return '<div class="rec"><div class="rec-h">'+esc(sido)
+    +(vol?' <span class="rec-vol">거래량 '+Math.round(vol.value).toLocaleString()+'건</span>':'')+'</div>'
     +'<div class="rec-v">'+verdict+'</div></div>';
 }
 function renderMonitor(){
@@ -946,20 +969,19 @@ var WD=["일","월","화","수","목","금","토"];
 function weekdayKo(ds){var d=new Date(ds+"T00:00:00");return isNaN(d)?"":WD[d.getDay()];}
 function clip(t,n){t=t||"";return t.length>n?t.slice(0,n)+"…":t;}
 function weekSummary(arr){
-  // 주간 흐름 한줄 요약(명사 종결, 자동 생성)
-  var byc={}; arr.forEach(function(s){byc[s.cat]=(byc[s.cat]||0)+1;});
-  var catTop=Object.keys(byc).sort(function(a,b){return byc[b]-byc[a];}).slice(0,2)
-    .map(function(c){return (CAT[c]||c)+" "+byc[c]+"건";});
-  var reds=arr.filter(function(s){return s.trig==="red";});
-  var yel=arr.filter(function(s){return s.trig==="yellow";});
-  var bysi={}; arr.forEach(function(s){ if(s.sido&&s.sido!=="전국"){var k=s.sido+(s.gu?" "+s.gu:"");bysi[k]=(bysi[k]||0)+1;}});
-  var regTop=Object.keys(bysi).sort(function(a,b){return bysi[b]-bysi[a];}).slice(0,2);
-  var p=[];
-  if(catTop.length) p.push(catTop.join("·")+" 중심");
-  if(reds.length) p.push('<span class="lr">🔴 즉시 '+reds.length+'건</span>(주요: '+esc(clip(reds[0].title,24))+")");
-  else if(yel.length) p.push('<span class="ly">🟡 주목 '+yel.length+'건</span>');
-  if(regTop.length) p.push(esc(regTop.join("·"))+" 비중");
-  return p.join(" · ")+".";
+  // 그 주 기사들의 한두 줄 리뷰(명사 종결) — 분야별 대표 헤드라인을 엮음
+  var order=["policy","price","macro","semicon"];
+  var rank={red:0,yellow:1,none:2};
+  var parts=[];
+  order.forEach(function(c){
+    var cs=arr.filter(function(s){return s.cat===c;});
+    if(!cs.length) return;
+    cs.sort(function(a,b){return (rank[a.trig]||2)-(rank[b.trig]||2)||(b.date||"").localeCompare(a.date||"");});
+    var lead=cs[0];
+    parts.push('<span class="wsb">'+(CAT[c]||c)+'</span> '
+      +(lead.trig==="red"?"🔴 ":lead.trig==="yellow"?"🟡 ":"")+esc(clip(lead.title,34)));
+  });
+  return parts.length?parts.join("<br>"):"주요 시그널 없음.";
 }
 function sigLineND(s){   // 날짜 생략(일자 헤더에 표시) · 카테고리 태그 부착
   return '<li><span class="wtag '+esc(s.cat||"")+'">'+esc(CAT[s.cat]||s.cat||"-")+'</span>'
@@ -1022,7 +1044,7 @@ function render(){
   document.getElementById("view-frames").classList.toggle("on",S.view==="frames");
   document.getElementById("view-personal").classList.toggle("on",S.view==="personal");
   var crumb=document.getElementById("crumb");
-  if(S.view==="list"){ crumb.style.display=""; renderCrumb(); renderList();
+  if(S.view==="list"){ crumb.style.display=""; renderRegbar(); renderCrumb(); renderList();
     setTimeout(function(){ if(map){ map.invalidateSize(); renderMap(); } },60); }
   else {
     if(S.view==="weekly") renderWeekly();
