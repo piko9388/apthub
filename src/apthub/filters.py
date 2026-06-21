@@ -46,18 +46,30 @@ def detect_regions(text: str) -> tuple[str | None, list[str]]:
     region 은 '선택된 sido'의 매칭 구만 반환한다(타 시도 구 혼입 방지).
     """
     low = text.lower()
-    per_sido: dict[str, tuple[int, list[str]]] = {}
+    # (토큰, 시도, 구) 목록 — 긴 토큰부터 매칭·소거해 동명이구 부분문자열 오태깅 방지
+    # (예: '남동구'를 먼저 소거하면 '동구'가 그 잔여에 다시 걸리지 않음)
+    toks = []
     for sido, spec in config.regions().items():
-        dists = [district for district, names in spec["districts"].items()
-                 if any(name.lower() in low for name in [district] + names)]
-        alias = 1 if any(a.lower() in low for a in spec["aliases"]) else 0
-        score = 2 * len(dists) + alias          # 구 매칭 우선
-        if score:
-            per_sido[sido] = (score, dists)
-    if not per_sido:
+        for district, names in spec["districts"].items():
+            for nm in [district] + names:
+                toks.append((nm.lower(), sido, district))
+    toks.sort(key=lambda t: -len(t[0]))
+    work = low
+    matched: dict[str, set] = {}
+    for nm, sido, district in toks:
+        if nm and nm in work:
+            matched.setdefault(sido, set()).add(district)
+            work = work.replace(nm, "·")        # 소거
+    alias_hit = {sido: 1 for sido, spec in config.regions().items()
+                 if any(a.lower() in low for a in spec["aliases"])}
+    sidos = set(matched) | set(alias_hit)
+    if not sidos:
         return None, []
-    sido = max(per_sido, key=lambda s: per_sido[s][0])
-    return sido, _dedup(per_sido[sido][1])
+    # 점수: 구 매칭 2점 + 명시 시도명(alias) 3점 → '경기 OO시' 접두가 동률을 깬다
+    def score(s):
+        return 2 * len(matched.get(s, set())) + 3 * alias_hit.get(s, 0)
+    best = max(sidos, key=score)
+    return best, _dedup(list(matched.get(best, [])))
 
 
 def detect_category(text: str) -> tuple[str | None, list[str]]:
