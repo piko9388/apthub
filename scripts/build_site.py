@@ -560,6 +560,22 @@ TEMPLATE = r"""<!DOCTYPE html>
   .rec-b b{color:var(--navy)}
   .rec-v{font-size:11.5px;color:var(--navy2);margin-top:7px;padding-top:7px;border-top:1px dashed var(--border);line-height:1.5}
   .rec-v b{color:var(--red)}
+  /* 밴드 분석 */
+  .bsec{font-size:14px;color:var(--navy);margin:14px 2px 8px;font-weight:700}
+  /* 아파트 정보 */
+  .aptgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+  .aptcard{border:1px solid var(--border);border-radius:10px;padding:11px 13px;background:#fbfcfd}
+  .apth{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .apth b{font-size:14px;color:var(--navy)}
+  .aptloc{font-size:10.5px;color:var(--accent);background:#eef2f7;border-radius:5px;padding:1px 6px}
+  .apt-m{font-size:11px;color:var(--muted);margin:4px 0 6px;font-variant-numeric:tabular-nums}
+  .apt-l{list-style:none;margin:0;padding:0}
+  .apt-l li{font-size:12px;color:var(--navy2);padding:3px 0;border-top:1px solid #f3f5f7}
+  .apt-l li:first-child{border-top:none}
+  .apt-l a{color:var(--navy2);text-decoration:none}.apt-l a:hover{color:var(--accent)}
+  .apt-l .ad{color:var(--muted);font-size:10.5px;font-variant-numeric:tabular-nums;margin-right:4px}
+  .apt-l b{color:var(--navy)}
+  .apt-j{font-size:11px;color:#2e7d52;margin-top:5px}
   /* 월별 정리 */
   .lgd{font-size:11px;color:var(--muted)}
   .lr{color:var(--red);font-weight:600}.ly{color:var(--amber);font-weight:600}
@@ -647,6 +663,8 @@ TEMPLATE = r"""<!DOCTYPE html>
   <div class="crumb" id="crumb"></div>
   <div class="panel" id="view-report">__REPORT__</div>
   <div class="panel" id="view-monitor"></div>
+  <div class="panel" id="view-bands"></div>
+  <div class="panel" id="view-apt"></div>
   <div class="panel" id="view-weekly"></div>
   <div id="view-list" style="display:none">
     <div id="map"></div>
@@ -709,8 +727,10 @@ function buildSidebar(){
   h+='<div class="navsec"><div class="navttl">보기</div>';
   h+=navrow("📋 종합 동향","__view_report",S.view==="report");
   h+=navrow("📊 동향 모니터링","__view_monitor",S.view==="monitor");
+  h+=navrow("📐 밴드 분석","__view_bands",S.view==="bands");
   h+=navrow("🗓 주차별 정리","__view_weekly",S.view==="weekly");
   h+=navrow("🗂 지역별 보기","__view_list",S.view==="list");
+  h+=navrow("🏢 아파트 정보","__view_apt",S.view==="apt");
   h+=navrow("📚 부읽남 참고","__view_frames",S.view==="frames");
   if(!PUBLIC) h+=navrow("개인 맞춤(정훈)","__view_personal",S.view==="personal");
   h+='</div><div class="navsec"><div class="navttl">지역 드릴다운</div>';
@@ -756,6 +776,8 @@ function buildSidebar(){
       if(k==="all"){S.sido=null;S.gu=null;S.view="list";}
       else if(k==="__view_report"){S.view="report";}
       else if(k==="__view_monitor"){S.view="monitor";}
+      else if(k==="__view_bands"){S.view="bands";}
+      else if(k==="__view_apt"){S.view="apt";}
       else if(k==="__view_weekly"){S.view="weekly";}
       else if(k==="__view_list"){S.view="list";}
       else if(k==="__view_frames"){S.view="frames";}
@@ -957,6 +979,103 @@ function renderMonitor(){
   host.innerHTML=h;
 }
 
+/* ---------- 밴드 분석 (가격대·면적대 분리) ---------- */
+var ABANDS=["40이하","40-60","60-85","85-130","130초과"];
+function bandLatest(metric,sido,bandkey,band){
+  var a=MET.filter(function(m){return m.metric===metric&&m.sido===sido&&(m[bandkey]||"")===band;})
+    .sort(function(x,y){return (x.date||"").localeCompare(y.date||"");});
+  return a.length?a[a.length-1]:null;
+}
+function bandTable(metric,bandkey,bands){
+  // 해당 metric에서 band가 채워진 데이터가 있는 sido만 행으로
+  var rows=MET.filter(function(m){return m.metric===metric&&(m[bandkey]||"");});
+  if(!rows.length) return "";
+  var sidos=[]; rows.forEach(function(m){ if(sidos.indexOf(m.sido)<0)sidos.push(m.sido); });
+  var order=["전국","수도권","서울","경기","인천"];
+  sidos.sort(function(a,b){return order.indexOf(a)-order.indexOf(b);});
+  var th=bands.map(function(b){return '<th>'+b+'</th>';}).join("");
+  var body=sidos.map(function(sd){
+    var tds=bands.map(function(b){var m=bandLatest(metric,sd,bandkey,b);
+      return '<td>'+(m?fmtV(m):'·')+'</td>';}).join("");
+    return '<tr><td>'+esc(sd)+'</td>'+tds+'</tr>';
+  }).join("");
+  return '<section class="msec"><h3>'+esc(metric)+'</h3><div class="tw"><table class="rt">'
+    +'<thead><tr><th>지역</th>'+th+'</tr></thead><tbody>'+body+'</tbody></table></div></section>';
+}
+function renderBands(){
+  var host=document.getElementById("view-bands");
+  var aMetrics=[], pMetrics=[];
+  MET.forEach(function(m){
+    if(m.aband && aMetrics.indexOf(m.metric)<0) aMetrics.push(m.metric);
+    if(m.pband && pMetrics.indexOf(m.metric)<0) pMetrics.push(m.metric);
+  });
+  var h='<div class="lead">밴드 분석 — 대출·세제 경계(<b>가격대</b> 6/9/15/25억) · R-ONE 표준(<b>면적대</b> 40/60/85/130㎡)로 분리. 최신값.</div>';
+  if(!aMetrics.length && !pMetrics.length){
+    h+='<div class="empty">밴드 데이터 수집 중. <code>scripts/m_signal_fetch.py</code>(RTMS 면적대 집계)·KB 5분위 적재 후 채워집니다.<br>실행: <code>RTMS_KEY=… python3 scripts/m_signal_fetch.py --regions gaps --out out.json</code></div>';
+    host.innerHTML=h; return;
+  }
+  if(aMetrics.length){
+    h+='<h2 class="bsec">면적대별 (전용㎡)</h2>';
+    aMetrics.forEach(function(mt){ h+=bandTable(mt,"aband",ABANDS); });
+  }
+  if(pMetrics.length){
+    // 가격대 밴드는 데이터에 나타난 순서대로
+    var pbands=[]; MET.forEach(function(m){ if(m.pband&&pbands.indexOf(m.pband)<0)pbands.push(m.pband); });
+    h+='<h2 class="bsec">가격대별</h2>';
+    pMetrics.forEach(function(mt){ h+=bandTable(mt,"pband",pbands); });
+  }
+  host.innerHTML=h;
+}
+
+/* ---------- 아파트 정보 (실거래 기반 단지 카탈로그) ---------- */
+var APT_RE=/([가-힣A-Za-z0-9·()]+)\s+(\d+(?:\.\d+)?)\s*㎡\s*(\d+(?:\.\d+)?)\s*억/;
+function buildCatalog(){
+  var by={};
+  SIG.forEach(function(s){
+    if(s.cat!=="price"||!s.gu) return;
+    var m=APT_RE.exec(s.title||""); if(!m) return;
+    var apt=m[1].replace(/^\[.*?\]/,"").trim();
+    if(apt.length<2) return;
+    var isJ=/(전세|월세)/.test(s.title);
+    var key=s.sido+"|"+s.gu+"|"+apt;
+    var o=by[key]||(by[key]={sido:s.sido,gu:s.gu,apt:apt,trades:[]});
+    o.trades.push({area:parseFloat(m[2]),price:parseFloat(m[3]),date:s.date,jeonse:isJ,url:s.url});
+  });
+  return Object.keys(by).map(function(k){return by[k];});
+}
+function renderApt(){
+  var host=document.getElementById("view-apt");
+  var cat=buildCatalog();
+  if(S.q) cat=cat.filter(function(o){return (o.apt+o.sido+o.gu).toLowerCase().indexOf(S.q)>=0;});
+  // 거래 많은 단지 우선
+  cat.sort(function(a,b){return b.trades.length-a.trades.length;});
+  var CAP=80, shown=cat.slice(0,CAP);
+  var h='<div class="lead">아파트 정보 — 실거래 시그널에서 자동 추출한 단지 카탈로그('+cat.length+'단지)'
+    +' · 매매/전세 최근순. 단지 클릭 시 원문.</div>';
+  if(!shown.length){ host.innerHTML=h+'<div class="empty">단지가 없습니다. 검색어를 바꿔보세요.</div>'; return; }
+  h+='<div class="aptgrid">';
+  shown.forEach(function(o){
+    var sales=o.trades.filter(function(t){return !t.jeonse;}).sort(function(x,y){return (y.date||"").localeCompare(x.date||"");});
+    var jeon=o.trades.filter(function(t){return t.jeonse;});
+    var areas=[]; o.trades.forEach(function(t){ if(t.area&&areas.indexOf(Math.round(t.area))<0)areas.push(Math.round(t.area)); });
+    areas.sort(function(a,b){return a-b;});
+    var prices=sales.map(function(t){return t.price;});
+    var rng=prices.length?(prices.length>1?Math.min.apply(null,prices)+"~"+Math.max.apply(null,prices)+"억":prices[0]+"억"):"—";
+    var rows=sales.slice(0,4).map(function(t){
+      return '<li>'+(t.url?'<a href="'+esc(t.url)+'" target="_blank" rel="noopener">':'')
+        +'<span class="ad">'+esc(t.date||"")+'</span> 전용 '+t.area+'㎡ <b>'+t.price+'억</b>'
+        +(t.url?'</a>':'')+'</li>';
+    }).join("");
+    var jl=jeon.length?'<div class="apt-j">전세 '+jeon.length+'건 (최근 '+jeon[0].price+'억)</div>':'';
+    h+='<div class="aptcard"><div class="apth"><b>'+esc(o.apt)+'</b>'
+      +'<span class="aptloc">'+esc(o.sido+" "+o.gu)+'</span></div>'
+      +'<div class="apt-m">전용 '+(areas.join("·")||"-")+'㎡ · 매매 '+sales.length+'건 · 시세 '+rng+'</div>'
+      +(rows?'<ul class="apt-l">'+rows+'</ul>':'')+jl+'</div>';
+  });
+  h+='</div>'+(cat.length>CAP?'<p class="rdisc">상위 '+CAP+'단지 표시 · 검색으로 좁히기 가능.</p>':'');
+  host.innerHTML=h;
+}
+
 /* ---------- 주차별 정리 (일자별 드릴다운) ---------- */
 function mondayOf(ds){var d=new Date(ds+"T00:00:00");if(isNaN(d))return ds;var w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return d.toISOString().slice(0,10);}
 function addDays(ds,n){var d=new Date(ds+"T00:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);}
@@ -1042,6 +1161,8 @@ function render(){
   document.getElementById("view-list").style.display=S.view==="list"?"block":"none";
   document.getElementById("view-report").classList.toggle("on",S.view==="report");
   document.getElementById("view-monitor").classList.toggle("on",S.view==="monitor");
+  document.getElementById("view-bands").classList.toggle("on",S.view==="bands");
+  document.getElementById("view-apt").classList.toggle("on",S.view==="apt");
   document.getElementById("view-weekly").classList.toggle("on",S.view==="weekly");
   document.getElementById("view-frames").classList.toggle("on",S.view==="frames");
   document.getElementById("view-personal").classList.toggle("on",S.view==="personal");
@@ -1051,9 +1172,13 @@ function render(){
   else {
     if(S.view==="weekly") renderWeekly();
     if(S.view==="monitor") renderMonitor();
+    if(S.view==="bands") renderBands();
+    if(S.view==="apt") renderApt();
     if(S.view==="report"){ crumb.style.display="none"; crumb.innerHTML=""; }
     else { crumb.style.display=""; crumb.innerHTML='<span class="cp">'
       +(S.view==="monitor"?"📊 동향 모니터링 — 공식 지표 ↔ 뉴스 정합"
+       :S.view==="bands"?"📐 밴드 분석 — 가격대·면적대 분리"
+       :S.view==="apt"?"🏢 아파트 정보 — 단지 카탈로그"
        :S.view==="weekly"?"🗓 주차별 정리 — 주별 동향(일자 드릴다운)"
        :S.view==="frames"?"📚 부읽남 38강 판단 프레임":"👤 개인 맞춤(정훈) — 보조")+'</span>'; }
   }
@@ -1071,7 +1196,8 @@ document.querySelectorAll(".chip.tg").forEach(function(b){
     S.view="list"; render(); };
 });
 document.getElementById("sort").onchange=function(e){S.sort=e.target.value;renderList();};
-document.getElementById("q").oninput=function(e){S.q=e.target.value.toLowerCase().trim();S.view="list";render();};
+document.getElementById("q").oninput=function(e){S.q=e.target.value.toLowerCase().trim();
+  if(S.view!=="apt") S.view="list"; render();};
 function closeSide(){document.getElementById("side").classList.remove("open");document.getElementById("backdrop").classList.remove("on");
   document.getElementById("burger").setAttribute("aria-expanded","false");}
 document.getElementById("burger").onclick=function(){var o=document.getElementById("side").classList.toggle("open");
