@@ -393,8 +393,12 @@ def build():
     SITE.mkdir(exist_ok=True)
     (SITE / "index.html").write_text(doc, encoding="utf-8")
     (SITE / ".nojekyll").write_text("", encoding="utf-8")
+    # 레포 루트에도 출력 — Pages Source가 'Deploy from a branch'(root)여도
+    # README 대신 대시보드가 홈으로 서빙되도록 보장(이중화).
+    (ROOT / "index.html").write_text(doc, encoding="utf-8")
+    (ROOT / ".nojekyll").write_text("", encoding="utf-8")
     mode = "공개판매(개인 제외)" if PUBLIC_ONLY else "개인 보조 포함"
-    print(f"site/index.html 생성: 시그널 {len(sigs)}건 (🔴{reds} 🟡{yellows}) · {mode}")
+    print(f"index.html 생성(site/ + 루트): 시그널 {len(sigs)}건 (🔴{reds} 🟡{yellows}) · {mode}")
 
 
 TEMPLATE = """<!DOCTYPE html>
