@@ -100,6 +100,8 @@ PRICE_MIN, PRICE_MAX = 3.0, 200.0   # 수도권 아파트 현실 범위(억) —
 
 
 def parse_sale_prices(sig) -> list[float]:
+    if getattr(sig, "kind", "news") == "data":
+        return []        # 지표(지수·거래량 등)는 실거래 중위 표본에서 제외
     if sig.category != "price":
         return []
     if ("전세" in sig.title or "월세" in sig.title) and "매매" not in sig.title:
@@ -175,6 +177,9 @@ def client_signal(s) -> dict:
         "trig": s.trigger, "conf": confidence_of(s.url, s.confidence),
         "comment": s.comment, "topic": (topic_of(s) or ""),
         "price": (round(median(prices), 1) if prices else None),
+        "kind": getattr(s, "kind", "news"),
+        "metric": getattr(s, "metric", ""), "value": getattr(s, "value", None),
+        "unit": getattr(s, "unit", ""),
     }
 
 
@@ -269,6 +274,7 @@ def report_html(sigs, stats) -> str:
       '<details class="guide"><summary>📖 사용설명서</summary>'
       '<ul>'
       '<li><b>종합 동향</b> — 기사·실거래를 요약·분석한 흐름 브리핑(현재 화면)</li>'
+      '<li><b>동향 모니터링</b> — 공식 지표(부동산원·KB·한은·국토부)와 뉴스를 정합해 실제 추세 검증, 뉴스 과장 여부 판별</li>'
       '<li><b>월별 정리</b> — 월 단위 시그널 묶음·트리거 집계와 전월 대비 증감 흐름</li>'
       '<li><b>지역별 보기</b> — 좌측 메뉴/지도에서 시·도·구 선택, 상단 칩으로 분류·트리거 필터, 검색창으로 단지·키워드 조회</li>'
       '<li><b>트리거</b> — <span class="lr">🔴 즉시</span>: 발견 즉시 주목 사안 · <span class="ly">🟡 주목</span>: 주간 점검 사안</li>'
@@ -298,16 +304,20 @@ def report_html(sigs, stats) -> str:
 
 def build():
     sigs = load_all()
-    reds = sum(1 for s in sigs if s.trigger == "red")
-    yellows = sum(1 for s in sigs if s.trigger == "yellow")
+    # 두 트랙 분리: news(기사·정성) vs data(공식 지표·정량)
+    news = [s for s in sigs if getattr(s, "kind", "news") != "data"]
+    dat = [s for s in sigs if getattr(s, "kind", "news") == "data"]
+    reds = sum(1 for s in news if s.trigger == "red")
+    yellows = sum(1 for s in news if s.trigger == "yellow")
     data = {
         "updated": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "total": len(sigs), "reds": reds, "yellows": yellows,
-        "public": PUBLIC_ONLY,
-        "sig": [client_signal(s) for s in sigs],
-        "regions": region_agg(sigs),
+        "total": len(news), "reds": reds, "yellows": yellows,
+        "data_count": len(dat), "public": PUBLIC_ONLY,
+        "sig": [client_signal(s) for s in news],
+        "met": [client_signal(s) for s in dat],
+        "regions": region_agg(news),
     }
-    dates = sorted(s.date for s in sigs if s.date)
+    dates = sorted(s.date for s in news if s.date)
     def _ym(d):
         return f"{d[:4]}.{int(d[5:7])}" if d else ""
     # 기준 기간: 초기 희소 표본(아웃라이어)을 제외하고 최근 시그널 95%가 들어오는
@@ -318,17 +328,18 @@ def build():
         core = dates[cut:] or dates
         period = f"{_ym(core[0])}~{_ym(dates[-1])}"
     stats = {
-        "total": len(sigs), "reds": reds, "yellows": yellows,
+        "total": len(news), "reds": reds, "yellows": yellows,
         "updated": data["updated"], "period": period,
-        "seoul_med": _sido_median(sigs, "서울"),
-        "gg_med": _sido_median(sigs, "경기"),
-        "ic_med": _sido_median(sigs, "인천"),
+        "data_count": len(dat),
+        "seoul_med": _sido_median(news, "서울"),
+        "gg_med": _sido_median(news, "경기"),
+        "ic_med": _sido_median(news, "인천"),
     }
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     doc = (TEMPLATE
            .replace("__DATA__", blob)
-           .replace("__REPORT__", report_html(sigs, stats))
-           .replace("__PERSONAL__", personal_html(sigs))
+           .replace("__REPORT__", report_html(news, stats))
+           .replace("__PERSONAL__", personal_html(news))
            .replace("__FRAMES__", frames_html())
            .replace("__PUBLIC__", "1" if PUBLIC_ONLY else "0"))
     SITE.mkdir(exist_ok=True)
@@ -336,8 +347,8 @@ def build():
     (SITE / ".nojekyll").write_text("", encoding="utf-8")
     (ROOT / "index.html").write_text(doc, encoding="utf-8")
     (ROOT / ".nojekyll").write_text("", encoding="utf-8")
-    print(f"index.html 생성(site/ + 루트): 시그널 {len(sigs)}건 (🔴{reds} 🟡{yellows}) "
-          f"· {'공개판매' if PUBLIC_ONLY else '개인 포함'}")
+    print(f"index.html 생성(site/ + 루트): 뉴스 {len(news)}건 (🔴{reds} 🟡{yellows}) "
+          f"· 지표 {len(dat)}건 · {'공개판매' if PUBLIC_ONLY else '개인 포함'}")
 
 
 TEMPLATE = r"""<!DOCTYPE html>
@@ -453,6 +464,28 @@ TEMPLATE = r"""<!DOCTYPE html>
   .rsec .rp:last-child{margin-bottom:0}
   .rsec b{color:var(--navy)}
   .rdisc{font-size:11px;color:var(--muted);margin:6px 2px 0;line-height:1.5}
+  /* 동향 모니터링 */
+  .msec{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:14px 17px;margin-bottom:11px;box-shadow:var(--shadow)}
+  .msec h3{margin:0 0 11px;font-size:14.5px;color:var(--accent);letter-spacing:-.2px}
+  .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px}
+  .mtile{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:#fbfcfd}
+  .mt-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .mt-n{font-size:12px;color:var(--navy2);font-weight:600}
+  .mt-v{font-size:18px;font-weight:700;color:var(--navy);text-decoration:none;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .mt-v:hover{color:var(--accent)}
+  .mt-d{font-size:10.5px;color:var(--muted);margin-top:3px}
+  .mt-f{font-size:10.5px;color:var(--navy2);margin-top:6px;line-height:1.7}
+  .mt-f .fv{font-variant-numeric:tabular-nums}.mt-f i{color:var(--muted);margin:0 4px;font-style:normal}
+  .recgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+  .rec{border:1px solid var(--border);border-radius:10px;padding:11px 13px;background:#fbfcfd}
+  .rec-h{font-size:13.5px;font-weight:700;color:var(--navy);margin-bottom:6px}
+  .rec-b{font-size:12px;color:var(--navy2);margin:3px 0}
+  .rec-i{display:inline-block;font-size:10px;font-weight:700;color:#fff;background:var(--accent);border-radius:5px;padding:1px 6px;margin-right:5px}
+  .rec-i.news{background:#7a6a3a}
+  .rec-b b{color:var(--navy)}
+  .rec-v{font-size:11.5px;color:var(--navy2);margin-top:7px;padding-top:7px;border-top:1px dashed var(--border);line-height:1.5}
+  .rec-v b{color:var(--red)}
   /* 월별 정리 */
   .lgd{font-size:11px;color:var(--muted)}
   .lr{color:var(--red);font-weight:600}.ly{color:var(--amber);font-weight:600}
@@ -524,6 +557,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 <main>
   <div class="crumb" id="crumb"></div>
   <div class="panel" id="view-report">__REPORT__</div>
+  <div class="panel" id="view-monitor"></div>
   <div class="panel" id="view-monthly"></div>
   <div id="view-list" style="display:none">
     <div id="map"></div>
@@ -556,7 +590,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 <script>
 var DATA = __DATA__;
 var PUBLIC = "__PUBLIC__" === "1";
-var SIG = DATA.sig, REG = DATA.regions;
+var SIG = DATA.sig, REG = DATA.regions, MET = DATA.met||[];
 var S = {view:"report", sido:null, gu:null, cat:"", trig:null, q:"", sort:"date_desc"};
 var CAT={policy:"정책·세제",price:"시세·실거래",macro:"금리·거시",semicon:"반도체"};
 var CONF={"공식":"● 공식","언론":"◐ 언론","추정":"○ 추정"};
@@ -579,6 +613,7 @@ function buildSidebar(){
   Object.keys(gus).forEach(function(k){gus[k].sort();});
   var h='<div class="navsec"><div class="navttl">보기</div>';
   h+=navrow("📋 종합 동향","__view_report",S.view==="report");
+  h+=navrow("📊 동향 모니터링","__view_monitor",S.view==="monitor");
   h+=navrow("🗓 월별 정리","__view_monthly",S.view==="monthly");
   h+=navrow("🗂 지역별 보기","__view_list",S.view==="list");
   h+=navrow("📚 부읽남 참고","__view_frames",S.view==="frames");
@@ -611,6 +646,7 @@ function buildSidebar(){
     el.onclick=function(){ var k=el.getAttribute("data-key");
       if(k==="all"){S.sido=null;S.gu=null;S.view="list";}
       else if(k==="__view_report"){S.view="report";}
+      else if(k==="__view_monitor"){S.view="monitor";}
       else if(k==="__view_monthly"){S.view="monthly";}
       else if(k==="__view_list"){S.view="list";}
       else if(k==="__view_frames"){S.view="frames";}
@@ -715,6 +751,71 @@ function renderMap(){
   else { map.fitBounds(SUDO); }
 }
 
+/* ---------- 동향 모니터링 (지표 ↔ 뉴스 정합) ---------- */
+var HOT=["급등","폭등","신고가","불장","과열","영끌","패닉","최고가","고점","치솟","뛴","급반등","불붙","폭주"];
+var COLD=["하락","약세","급매","역전세","미분양","공포","조정","내림","침체","꺾","미끄","빙하기","거래절벽","하락세"];
+function ymLabel(d){if(!d)return "";var p=d.split("-");return p[0].slice(2)+"."+parseInt(p[1],10);}
+function fmtV(m){if(!m||m.value==null)return "—";var v=Math.round(m.value*100)/100;return (v>0&&m.unit==="%"?"+":"")+v+(m.unit||"");}
+function series(metric,sido){return MET.filter(function(m){return m.metric===metric&&(!sido||m.sido===sido);})
+  .sort(function(x,y){return (x.date||"").localeCompare(y.date||"");});}
+function metricTile(metric,sido){
+  var a=series(metric,sido); if(!a.length)return "";
+  var cur=a[a.length-1];
+  var flow=a.slice(-6).map(function(m){return '<span class="fv">'+ymLabel(m.date)+" "+fmtV(m)+'</span>';}).join('<i>·</i>');
+  return '<div class="mtile"><div class="mt-h"><span class="mt-n">'+esc(metric)+'</span>'
+    +'<a class="mt-v" href="'+esc(cur.url||"#")+'" target="_blank" rel="noopener" title="'+esc(cur.source||"")+'">'+fmtV(cur)+'</a></div>'
+    +'<div class="mt-d">최신 '+esc(cur.date||"")+' · '+esc(cur.source||"")+'</div>'
+    +(a.length>1?'<div class="mt-f">흐름 '+flow+'</div>':'')+'</div>';
+}
+function newsLean(sido){
+  var ns=SIG.filter(function(s){return s.sido===sido;});
+  var hot=0,cold=0;
+  ns.forEach(function(s){var t=(s.title||"")+(s.summary||"");
+    if(HOT.some(function(k){return t.indexOf(k)>=0;}))hot++;
+    if(COLD.some(function(k){return t.indexOf(k)>=0;}))cold++;});
+  return {n:ns.length,hot:hot,cold:cold};
+}
+function reconcile(sido){
+  var idx=series("매매가격지수 변동률",sido); idx=idx.length?idx[idx.length-1]:null;
+  var vol=series("아파트 매매 거래량",sido); vol=vol.length?vol[vol.length-1]:null;
+  var ln=newsLean(sido);
+  var dir=idx&&idx.value!=null?(idx.value>0.1?"상승":idx.value<-0.1?"하락":"보합"):"지표 미수집";
+  var lean=ln.hot>ln.cold+1?"과열 강조":ln.cold>ln.hot+1?"약세 강조":"중립";
+  var verdict;
+  if(dir==="지표 미수집") verdict='지표 수집 시 뉴스와 교차검증 — 현재는 뉴스 '+ln.n+'건 기준';
+  else if(dir==="상승"&&lean==="과열 강조") verdict='지표·뉴스 모두 상승 방향 — <b>일치</b>. 단 개별 신고가 헤드라인은 지수 흐름으로 재확인.';
+  else if((dir==="보합"||dir==="하락")&&lean==="과열 강조") verdict='지표는 '+dir+'인데 뉴스는 과열 강조 — <b>뉴스 과장 주의</b>.';
+  else if(dir==="상승"&&lean==="약세 강조") verdict='지표는 상승인데 뉴스는 약세 강조 — <b>뉴스 신중·관망 톤</b>.';
+  else verdict='지표 '+dir+' · 뉴스 '+lean+' — 큰 괴리 없음.';
+  return '<div class="rec"><div class="rec-h">'+esc(sido)+'</div>'
+    +'<div class="rec-b"><span class="rec-i">지표</span> 매매지수 <b>'+(idx?fmtV(idx):"—")+'</b>('+dir+')'
+    +(vol?' · 거래량 <b>'+Math.round(vol.value).toLocaleString()+'건</b>':'')+'</div>'
+    +'<div class="rec-b"><span class="rec-i news">뉴스</span> '+ln.n+'건 · 과열어 '+ln.hot+' / 약세어 '+ln.cold+'</div>'
+    +'<div class="rec-v">'+verdict+'</div></div>';
+}
+function renderMonitor(){
+  var host=document.getElementById("view-monitor");
+  if(!MET.length){ host.innerHTML='<div class="lead">동향 모니터링 — 공식 지표 ↔ 뉴스 정합</div>'
+    +'<div class="empty">공식 지표(부동산원·KB·한은·국토부) 수집 중입니다. 채워지면 뉴스와 정합해 실제 추세를 보여줍니다.</div>'; return; }
+  var macro=["기준금리","COFIX","주택담보대출 금리","가계대출 증감","스트레스DSR 가산금리"];
+  var price=["매매가격지수 변동률","전세가격지수 변동률","주간 매매변동률","주간 전세변동률","KB 매매변동률","아파트 매매 거래량","주택 매매 거래량","미분양","준공후 미분양","입주물량","매수우위지수","매매전망지수"];
+  var geos=["전국","수도권","서울","경기","인천"];
+  var h='<div class="lead">동향 모니터링 — <b>공식 지표</b>(정량)와 <b>뉴스</b>(정성)를 정합해 실제 추세 점검 · 지표 '+MET.length+'건</div>';
+  // 거시
+  var mt=macro.map(function(m){return metricTile(m,"전국");}).filter(Boolean).join("");
+  if(mt) h+='<section class="msec"><h3>금리·거시</h3><div class="mgrid">'+mt+'</div></section>';
+  // 가격·거래(지역별)
+  geos.forEach(function(g){
+    var tiles=price.map(function(m){return metricTile(m,g);}).filter(Boolean).join("");
+    if(tiles) h+='<section class="msec"><h3>'+esc(g)+' 가격·거래</h3><div class="mgrid">'+tiles+'</div></section>';
+  });
+  // 정합
+  var recs=["서울","경기","인천"].map(reconcile).join("");
+  h+='<section class="msec"><h3>정합 — 뉴스 vs 지표</h3><div class="recgrid">'+recs+'</div>'
+    +'<p class="rdisc">과열어/약세어=뉴스 제목·요약의 표현 빈도(자극적 헤드라인 가늠용). 지표는 공식 통계 최신값. 둘의 방향이 어긋나면 뉴스 톤을 의심하고 지표를 따른다.</p></section>';
+  host.innerHTML=h;
+}
+
 /* ---------- 월별 정리 ---------- */
 function monthLabel(ym){var p=ym.split("-");return p[0]+"년 "+parseInt(p[1],10)+"월";}
 function renderMonthly(){
@@ -757,6 +858,7 @@ function render(){
   buildSidebar();
   document.getElementById("view-list").style.display=S.view==="list"?"block":"none";
   document.getElementById("view-report").classList.toggle("on",S.view==="report");
+  document.getElementById("view-monitor").classList.toggle("on",S.view==="monitor");
   document.getElementById("view-monthly").classList.toggle("on",S.view==="monthly");
   document.getElementById("view-frames").classList.toggle("on",S.view==="frames");
   document.getElementById("view-personal").classList.toggle("on",S.view==="personal");
@@ -765,9 +867,11 @@ function render(){
     setTimeout(function(){ if(map){ map.invalidateSize(); renderMap(); } },60); }
   else {
     if(S.view==="monthly") renderMonthly();
+    if(S.view==="monitor") renderMonitor();
     if(S.view==="report"){ crumb.style.display="none"; crumb.innerHTML=""; }
     else { crumb.style.display=""; crumb.innerHTML='<span class="cp">'
-      +(S.view==="monthly"?"🗓 월별 정리 — 월별 시그널 흐름"
+      +(S.view==="monitor"?"📊 동향 모니터링 — 공식 지표 ↔ 뉴스 정합"
+       :S.view==="monthly"?"🗓 월별 정리 — 월별 시그널 흐름"
        :S.view==="frames"?"📚 부읽남 38강 판단 프레임":"👤 개인 맞춤(정훈) — 보조")+'</span>'; }
   }
 }

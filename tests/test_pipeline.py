@@ -111,6 +111,22 @@ def test_region_detection():
     assert s4.sido == "전국"
 
 
+def test_data_kind_and_price_excluded():
+    # 정량 지표(metric+value) → 자동 data 트랙, 실거래 중위 표본에서 제외
+    import importlib, sys as _sys
+    from pathlib import Path as _P
+    _sys.path.insert(0, str(_P(__file__).resolve().parents[1] / "scripts"))
+    B = importlib.import_module("build_site")
+    d = Signal(title="서울 아파트 매매가격지수 +1.06%", source="부동산원",
+               category="price", metric="매매가격지수 변동률", value=1.06, unit="%")
+    assert d.kind == "data"
+    assert B.parse_sale_prices(d) == []     # 지수는 매매 표본이 아니다
+    # 일반 뉴스는 news, 실거래가는 표본으로 잡힘
+    n = Signal(title="잠실엘스 84㎡ 28.5억 실거래", source="RTMS", category="price")
+    assert n.kind == "news"
+    assert 28.5 in B.parse_sale_prices(n)
+
+
 def test_daily_surfaces_semicon():
     # 정책 🔴가 많아도 반도체(🟡)가 Top3 에서 사라지지 않아야 함.
     sigs = [
