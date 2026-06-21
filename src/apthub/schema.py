@@ -16,6 +16,7 @@ KST = timezone(timedelta(hours=9))
 # category: 03-monitoring.md 의 A/B/C/D 에 대응
 CATEGORIES = ("policy", "price", "macro", "semicon")
 TRIGGERS = ("red", "yellow", "none")
+KINDS = ("news", "data")          # news=기사(정성)·data=공식 지표(정량)
 
 
 def _now_kst_iso() -> str:
@@ -63,6 +64,11 @@ class Signal:
     trigger_reasons: list[str] = field(default_factory=list)
     implication: str = ""                 # 내 매수계획 함의 한 줄 (필수 권장)
     raw_ref: str = ""                     # data/raw 원문 캐시 경로(선택)
+    # 정량 지표(data 트랙) — 뉴스와 정합해 실제 동향을 검증
+    kind: str = "news"                    # news=기사 | data=공식 지표
+    metric: str = ""                      # 지표명(예: '매매가격지수 변동률','기준금리','거래량')
+    value: Optional[float] = None         # 지표 값(부호 포함)
+    unit: str = ""                        # 단위(%, 건, 호, 조원 …)
     collected_at: str = field(default_factory=_now_kst_iso)
     id: str = ""
 
@@ -72,6 +78,16 @@ class Signal:
             self.category = None      # 크롤 입력 오타(예: 'macre')에 견고 — 크래시 대신 무시
         if self.trigger not in TRIGGERS:
             self.trigger = "none"
+        # 정량 지표가 있으면 자동으로 data 트랙, 아니면 news
+        if self.value is not None and self.metric:
+            self.kind = "data"
+        elif self.kind not in KINDS:
+            self.kind = "news"
+        if self.value is not None:
+            try:
+                self.value = float(self.value)
+            except (TypeError, ValueError):
+                self.value = None
         if not self.id:
             self.id = self.make_id()
 
