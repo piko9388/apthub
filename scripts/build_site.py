@@ -94,23 +94,30 @@ def esc(s: str) -> str:
 
 # ---------------------------------------------------------------- 지역 지표 집계
 PRICE_RE = re.compile(r"(\d+(?:\.\d+)?)\s*억")
+# 전용면적(㎡) 바로 뒤의 가격 — 실거래가만 안정적으로 포착(델타·증감액 제외)
+AREA_PRICE_RE = re.compile(r"㎡[^0-9]{0,7}(\d+(?:\.\d+)?)\s*억")
 
 
 def parse_sale_prices(sig) -> list[float]:
-    """price 시그널의 '대표 매매가'(억) 1개만 추출 — 제목 우선, 없으면 요약 첫 값.
-    전세·월세·정책수치 제외. 신호당 1표본이라 중위가 과대계상되지 않는다."""
+    """price 시그널에서 매매가(억) 추출. 전세·월세·정책수치 제외.
+    1순위: '㎡ 뒤 가격' 패턴을 모두 포착(한 시그널의 복수 거래 반영).
+    없으면 본문 첫 억-토큰 1개(제목 우선). 모두 3~60억 범위로 필터."""
     if sig.category != "price":
         return []
     if ("전세" in sig.title or "월세" in sig.title) and "매매" not in sig.title:
         return []
-    for text in (sig.title, sig.summary):
-        for m in PRICE_RE.findall(text):
-            try:
-                v = float(m)
-            except ValueError:
-                continue
-            if 3.0 <= v <= 60.0:      # 수도권 아파트 현실 범위(억) — 첫 표본 채택
-                return [v]
+    text = sig.title + " " + sig.summary
+    anchored = [float(m) for m in AREA_PRICE_RE.findall(text)]
+    anchored = [v for v in anchored if 3.0 <= v <= 60.0]
+    if anchored:
+        return anchored
+    for m in PRICE_RE.findall(text):
+        try:
+            v = float(m)
+        except ValueError:
+            continue
+        if 3.0 <= v <= 60.0:
+            return [v]
     return []
 
 

@@ -64,15 +64,17 @@ class Signal:
     def __post_init__(self) -> None:
         self.date = normalize_date(self.date) if self.date else None
         if self.category and self.category not in CATEGORIES:
-            raise ValueError(f"category must be one of {CATEGORIES}, got {self.category!r}")
+            self.category = None      # 크롤 입력 오타(예: 'macre')에 견고 — 크래시 대신 무시
         if self.trigger not in TRIGGERS:
-            raise ValueError(f"trigger must be one of {TRIGGERS}, got {self.trigger!r}")
+            self.trigger = "none"
         if not self.id:
             self.id = self.make_id()
 
     def make_id(self) -> str:
-        """중복 제거용 id: URL 우선, 없으면 제목 해시."""
-        basis = (self.url or self.title).strip().lower()
+        """중복 제거용 id: URL+제목 해시.
+        집계사이트가 같은 랜딩 URL을 여러 거래에 재사용하는 경우가 있어, URL만으로
+        합치면 서로 다른 실거래가 사라진다. URL+제목 조합으로 구분한다."""
+        basis = (self.url + "\n" + self.title).strip().lower()
         return hashlib.sha1(basis.encode("utf-8")).hexdigest()[:12]
 
     def to_dict(self) -> dict[str, Any]:
