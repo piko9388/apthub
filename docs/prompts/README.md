@@ -10,6 +10,7 @@ python3 scripts/gen_reports.py        # 일/주간 리포트 재생성
 | 프롬프트 | 용도 | 트랙 |
 |---|---|---|
 | `master-crawl-prompt.md` | **종합 크롤(RSS·Google News·공식)** — 수도권 부동산+직결 경제 전수 | news+data |
+| `source-gap-prompt.md` | **1차 출처 매칭·세그먼트 보강**(면적대/가격대/심리/PIR/분양가…) | data |
 | `../news-crawl-prompt.md` | 주차별 뉴스(탈자극 사실추출) | news |
 | `../data-crawl-prompt.md` | 공식 지표(표준 metric: 지수·금리·거래량·미분양) | data |
 | `../paste-prompt.md` | 사람이 기사 붙여넣기(MAX 버전) | news |
