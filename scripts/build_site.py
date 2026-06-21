@@ -275,7 +275,7 @@ def report_html(sigs, stats) -> str:
       '<ul>'
       '<li><b>종합 동향</b> — 기사·실거래를 요약·분석한 흐름 브리핑(현재 화면)</li>'
       '<li><b>동향 모니터링</b> — 공식 지표(부동산원·KB·한은·국토부)와 뉴스를 정합해 실제 추세 검증, 뉴스 과장 여부 판별</li>'
-      '<li><b>월별 정리</b> — 월 단위 시그널 묶음·트리거 집계와 전월 대비 증감 흐름</li>'
+      '<li><b>주차별 정리</b> — 주(월~일) 단위 동향, 카드 펼치면 일자별 상세로 드릴다운</li>'
       '<li><b>지역별 보기</b> — 좌측 메뉴/지도에서 시·도·구 선택, 상단 칩으로 분류·트리거 필터, 검색창으로 단지·키워드 조회</li>'
       '<li><b>트리거</b> — <span class="lr">🔴 즉시</span>: 발견 즉시 주목 사안 · <span class="ly">🟡 주목</span>: 주간 점검 사안</li>'
       '<li><b>출처</b> — 공식(정부·기관) · 언론 · 추정 순의 신뢰도 표기</li>'
@@ -509,7 +509,16 @@ TEMPLATE = r"""<!DOCTYPE html>
   .wkl .wb{font-size:10px;margin-right:3px}
   .wkl .loc2{font-size:10.5px;color:var(--accent);background:#eef2f7;border-radius:4px;padding:0 5px}
   .wkl .more{color:var(--muted);font-style:italic}
+  .wkl .tl{color:var(--navy2);text-decoration:none}.wkl .tl:hover{color:var(--accent);text-decoration:underline}
   .wkempty{font-size:12px;color:var(--muted);margin-top:6px}
+  .dd{margin-top:9px;border-top:1px dashed var(--border);padding-top:6px}
+  .dd>summary{cursor:pointer;font-size:11.5px;font-weight:600;color:var(--accent);list-style:none;padding:3px 0}
+  .dd>summary::-webkit-details-marker{display:none}
+  .dd>summary::after{content:"▸";margin-left:5px;color:var(--muted);display:inline-block}
+  .dd[open]>summary::after{transform:rotate(90deg)}
+  .ddd{margin:6px 0 0;padding:7px 10px;background:#fafbfc;border:1px solid var(--border);border-radius:8px}
+  .ddh{font-size:11.5px;font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums}
+  .ddn{font-weight:400;color:var(--muted);margin-left:4px}
   .ftr{margin-top:24px;padding-top:14px;border-top:1px solid var(--border);text-align:center;font-size:11.5px;color:var(--muted);line-height:1.7}
   .ftr a{color:var(--accent);text-decoration:none}.ftr b{color:var(--navy2)}
   @media(min-width:721px){.rsec{padding:16px 20px}}
@@ -558,7 +567,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   <div class="crumb" id="crumb"></div>
   <div class="panel" id="view-report">__REPORT__</div>
   <div class="panel" id="view-monitor"></div>
-  <div class="panel" id="view-monthly"></div>
+  <div class="panel" id="view-weekly"></div>
   <div id="view-list" style="display:none">
     <div id="map"></div>
     <div class="maphint" id="maphint">지도 마커: 시군구별 시그널(크기=건수, 색=매매중위). 클릭 시 해당 지역만.</div>
@@ -614,7 +623,7 @@ function buildSidebar(){
   var h='<div class="navsec"><div class="navttl">보기</div>';
   h+=navrow("📋 종합 동향","__view_report",S.view==="report");
   h+=navrow("📊 동향 모니터링","__view_monitor",S.view==="monitor");
-  h+=navrow("🗓 월별 정리","__view_monthly",S.view==="monthly");
+  h+=navrow("🗓 주차별 정리","__view_weekly",S.view==="weekly");
   h+=navrow("🗂 지역별 보기","__view_list",S.view==="list");
   h+=navrow("📚 부읽남 참고","__view_frames",S.view==="frames");
   if(!PUBLIC) h+=navrow("개인 맞춤(정훈)","__view_personal",S.view==="personal");
@@ -647,7 +656,7 @@ function buildSidebar(){
       if(k==="all"){S.sido=null;S.gu=null;S.view="list";}
       else if(k==="__view_report"){S.view="report";}
       else if(k==="__view_monitor"){S.view="monitor";}
-      else if(k==="__view_monthly"){S.view="monthly";}
+      else if(k==="__view_weekly"){S.view="weekly";}
       else if(k==="__view_list"){S.view="list";}
       else if(k==="__view_frames"){S.view="frames";}
       else if(k==="__view_personal"){S.view="personal";}
@@ -816,41 +825,58 @@ function renderMonitor(){
   host.innerHTML=h;
 }
 
-/* ---------- 월별 정리 ---------- */
-function monthLabel(ym){var p=ym.split("-");return p[0]+"년 "+parseInt(p[1],10)+"월";}
-function renderMonthly(){
+/* ---------- 주차별 정리 (일자별 드릴다운) ---------- */
+function mondayOf(ds){var d=new Date(ds+"T00:00:00");if(isNaN(d))return ds;var w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return d.toISOString().slice(0,10);}
+function addDays(ds,n){var d=new Date(ds+"T00:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);}
+function isoWeek(ds){var d=new Date(ds+"T00:00:00");var t=new Date(d);t.setDate(d.getDate()+3-((d.getDay()+6)%7));var w1=new Date(t.getFullYear(),0,4);var n=1+Math.round(((t-w1)/864e5-3+((w1.getDay()+6)%7))/7);return (n<10?"0":"")+n;}
+function sigLine(s){
+  return '<li><span class="wb">'+(s.trig==="red"?"🔴":s.trig==="yellow"?"🟡":"·")+'</span>'
+    +'<span class="d">'+esc(s.date)+'</span> '
+    +(s.url?'<a class="tl" href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(s.title)+'</a>':esc(s.title))
+    +(s.gu?' <span class="loc2">'+esc(s.sido+" "+s.gu)+'</span>':'')+'</li>';
+}
+function renderWeekly(){
   var g={};
-  SIG.forEach(function(s){ if(!s.date)return; var k=s.date.slice(0,7); (g[k]=g[k]||[]).push(s); });
-  var months=Object.keys(g).sort().reverse();
-  var CAP=18, shown=months.slice(0,CAP);
-  var peak=0; months.forEach(function(m){ if(g[m].length>peak)peak=g[m].length; });
-  var h='<div class="lead">월별 시그널 흐름 — 최신순'+(months.length>CAP?(" · 최근 "+CAP+"개월"):"")
-    +' &nbsp;<span class="lgd"><span class="lr">🔴 즉시</span>=발견 즉시 주목 · <span class="ly">🟡 주목</span>=주간 점검 · 막대=월 시그널량</span></div>';
-  shown.forEach(function(ym,i){
-    var arr=g[ym].slice().sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});
+  SIG.forEach(function(s){ if(!s.date)return; var k=mondayOf(s.date); (g[k]=g[k]||[]).push(s); });
+  var weeks=Object.keys(g).sort().reverse();
+  var CAP=20, shown=weeks.slice(0,CAP);
+  var peak=0; weeks.forEach(function(w){ if(g[w].length>peak)peak=g[w].length; });
+  var h='<div class="lead">주(월~일)별 동향 — 최신순'+(weeks.length>CAP?(" · 최근 "+CAP+"주"):"")
+    +' · 카드를 펼치면 일자별 상세'
+    +' &nbsp;<span class="lgd"><span class="lr">🔴 즉시</span>=발견 즉시 주목 · <span class="ly">🟡 주목</span>=주간 점검</span></div>';
+  shown.forEach(function(mon){
+    var arr=g[mon].slice().sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});
     var reds=arr.filter(function(s){return s.trig==="red";});
     var yel=arr.filter(function(s){return s.trig==="yellow";});
-    var prev=shown[i+1]?g[shown[i+1]].length:null;   // 직전(더 오래된) 달
-    var delta=prev==null?"":(arr.length>prev?'<span class="up">▲'+(arr.length-prev)+'</span>'
-      :arr.length<prev?'<span class="dn">▼'+(prev-arr.length)+'</span>':'<span class="eq">―</span>');
     var pct=peak?Math.round(arr.length/peak*100):0;
     var byc={}; arr.forEach(function(s){byc[s.cat]=(byc[s.cat]||0)+1;});
     var chips=Object.keys(byc).sort(function(a,b){return byc[b]-byc[a];})
       .map(function(c){return '<span class="wcat">'+(CAT[c]||c)+" "+byc[c]+'</span>';}).join("");
-    var top=reds.concat(yel).slice(0,8).map(function(s){
-      return '<li><span class="wb">'+(s.trig==="red"?"🔴":"🟡")+'</span>'
-        +'<span class="d">'+esc(s.date)+'</span> '+esc(s.title)
-        +(s.gu?' <span class="loc2">'+esc(s.sido+" "+s.gu)+'</span>':'')+'</li>';
+    // 주간 핵심 트리거
+    var topTrig=reds.concat(yel).slice(0,6).map(sigLine).join("");
+    // 일자별 드릴다운
+    var byd={}; arr.forEach(function(s){ (byd[s.date]=byd[s.date]||[]).push(s); });
+    var days=Object.keys(byd).sort().reverse();
+    var dd=days.map(function(d){
+      var da=byd[d]; var dr=da.filter(function(s){return s.trig==="red";}).length;
+      var dy=da.filter(function(s){return s.trig==="yellow";}).length;
+      var items=da.slice().sort(function(a,b){return (a.trig==="red"?0:a.trig==="yellow"?1:2)-(b.trig==="red"?0:b.trig==="yellow"?1:2);});
+      var lis=items.slice(0,12).map(sigLine).join("");
+      var more=items.length>12?'<li class="more">…외 '+(items.length-12)+'건</li>':'';
+      return '<div class="ddd"><div class="ddh">'+esc(d)+' <span class="ddn">'+da.length+'건'
+        +(dr?' · <span class="lr">🔴'+dr+'</span>':'')+(dy?' · <span class="ly">🟡'+dy+'</span>':'')+'</span></div>'
+        +'<ul class="wkl">'+lis+more+'</ul></div>';
     }).join("");
-    var more=(reds.length+yel.length>8)?'<li class="more">그 외 트리거 '+(reds.length+yel.length-8)+'건…</li>':'';
-    h+='<section class="wk"><div class="wkh"><span class="wwk">'+monthLabel(ym)+'</span>'+delta
+    h+='<section class="wk"><div class="wkh"><span class="wwk">W'+isoWeek(mon)+'</span>'
+      +'<b>'+mon+' ~ '+addDays(mon,6)+'</b>'
       +'<span class="wkn">총 '+arr.length+' · <span class="lr">🔴 즉시 '+reds.length+'</span> · <span class="ly">🟡 주목 '+yel.length+'</span></span></div>'
       +'<div class="bar"><span style="width:'+pct+'%"></span></div>'
       +(chips?'<div class="wkc">'+chips+'</div>':'')
-      +(top?'<ul class="wkl">'+top+more+'</ul>':'<div class="wkempty">트리거 없음 · 일반 시그널 '+arr.length+'건</div>')
+      +(topTrig?'<ul class="wkl">'+topTrig+'</ul>':'<div class="wkempty">주간 트리거 없음</div>')
+      +'<details class="dd"><summary>일자별 보기 ('+days.length+'일)</summary>'+dd+'</details>'
       +'</section>';
   });
-  document.getElementById("view-monthly").innerHTML=h;
+  document.getElementById("view-weekly").innerHTML=h;
 }
 
 /* ---------- 렌더 ---------- */
@@ -859,19 +885,19 @@ function render(){
   document.getElementById("view-list").style.display=S.view==="list"?"block":"none";
   document.getElementById("view-report").classList.toggle("on",S.view==="report");
   document.getElementById("view-monitor").classList.toggle("on",S.view==="monitor");
-  document.getElementById("view-monthly").classList.toggle("on",S.view==="monthly");
+  document.getElementById("view-weekly").classList.toggle("on",S.view==="weekly");
   document.getElementById("view-frames").classList.toggle("on",S.view==="frames");
   document.getElementById("view-personal").classList.toggle("on",S.view==="personal");
   var crumb=document.getElementById("crumb");
   if(S.view==="list"){ crumb.style.display=""; renderCrumb(); renderList();
     setTimeout(function(){ if(map){ map.invalidateSize(); renderMap(); } },60); }
   else {
-    if(S.view==="monthly") renderMonthly();
+    if(S.view==="weekly") renderWeekly();
     if(S.view==="monitor") renderMonitor();
     if(S.view==="report"){ crumb.style.display="none"; crumb.innerHTML=""; }
     else { crumb.style.display=""; crumb.innerHTML='<span class="cp">'
       +(S.view==="monitor"?"📊 동향 모니터링 — 공식 지표 ↔ 뉴스 정합"
-       :S.view==="monthly"?"🗓 월별 정리 — 월별 시그널 흐름"
+       :S.view==="weekly"?"🗓 주차별 정리 — 주별 동향(일자 드릴다운)"
        :S.view==="frames"?"📚 부읽남 38강 판단 프레임":"👤 개인 맞춤(정훈) — 보조")+'</span>'; }
   }
 }
