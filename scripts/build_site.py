@@ -276,6 +276,14 @@ def category_board_html(sigs, reviews) -> str:
         y26 = sum(1 for s in cs if (s.date or "").startswith("2026"))
         reds = sum(1 for s in cs if s.trigger == "red")
         review = reviews.get(key, "")
+        # 모멘텀: 2026 월평균(6개월) vs 2025 월평균(12개월) → 가속/둔화
+        r25, r26 = y25 / 12.0, y26 / 6.0
+        if r26 > r25 * 1.15:
+            mom = '<span class="cbdir up" title="2026 발생 빈도 가속">▲ 가속</span>'
+        elif r26 < r25 * 0.85:
+            mom = '<span class="cbdir down" title="2026 발생 빈도 둔화">▼ 둔화</span>'
+        else:
+            mom = ''
         # 대표 시그널 2건 — 🔴 우선, 그다음 최신
         top = sorted(cs, key=lambda s: (rank.get(s.trigger, 2), _neg_date(s.date)))[:2]
         lis = "".join(
@@ -285,8 +293,8 @@ def category_board_html(sigs, reviews) -> str:
             for s in top)
         cards.append(
             f'<div class="cbcard"><div class="cbh"><b>{lbl}</b>'
-            f'<span class="cbn">{len(cs)}건 <i>(25:{y25}·26:{y26})</i>'
-            + (f' · <span class="lr">🔴 {reds}</span>' if reds else '') + '</span></div>'
+            f'<span class="cbn">{len(cs)}건'
+            + (f' · <span class="lr">🔴 {reds}</span>' if reds else '') + mom + '</span></div>'
             + (f'<div class="cbrev">{html.escape(review)}</div>' if review else '')
             + (f'<ul class="ylist">{lis}</ul>' if lis else '')
             + '</div>')
@@ -301,7 +309,44 @@ def _neg_date(d):
     return tuple(-int(x) for x in (d or "0000-00-00").replace("-", " ").split())
 
 
-def report_html(sigs, stats) -> str:
+def _latest_metric(dat, metric, sido):
+    """metric+sido 시계열의 최신값과 직전값을 (cur, prev)로 반환."""
+    xs = sorted([s for s in dat if getattr(s, "metric", None) == metric
+                 and (s.sido or "전국") == sido and getattr(s, "value", None) is not None],
+                key=lambda s: s.date or "")
+    if not xs:
+        return None, None
+    return xs[-1], (xs[-2] if len(xs) > 1 else None)
+
+
+def trend_headline(dat) -> str:
+    """한 줄 동향 헤드라인 — 지역별 주간 매매변동률 + 기준금리로 '어디로 가는가'를 즉시 표시."""
+    items = []
+    for sido, lbl in (("서울", "서울"), ("경기", "경기"), ("인천", "인천")):
+        cur, _ = _latest_metric(dat, "주간 매매변동률", sido)
+        if not cur:
+            continue
+        v = cur.value
+        cls = "up" if v > 0.02 else "down" if v < -0.02 else "flat"
+        arr = "▲" if v > 0.02 else "▼" if v < -0.02 else "→"
+        sign = "+" if v > 0 else ""
+        items.append(f'<span class="thl-i"><span class="k">{lbl}</span>'
+                     f'<span class="v {cls}">{arr} {sign}{round(v,2)}%/주</span></span>')
+    rate, rprev = _latest_metric(dat, "기준금리", "전국")
+    if rate:
+        if rprev and rate.value != rprev.value:
+            rc, ra = ("up", "▲") if rate.value > rprev.value else ("down", "▼")
+        else:
+            rc, ra = "flat", "→"
+        items.append(f'<span class="thl-i"><span class="k">기준금리</span>'
+                     f'<span class="v {rc}">{ra} {round(rate.value,2)}% {"동결" if rc=="flat" else ""}</span></span>')
+    if not items:
+        return ""
+    return ('<div class="thl"><div class="thl-t">📈 지금 시장은 — 최신 공식 지표</div>'
+            f'<div class="thl-g">{"".join(items)}</div></div>')
+
+
+def report_html(sigs, stats, dat=None) -> str:
     path = ROOT / "config" / "report.json"
     if not path.exists():
         return ""
@@ -311,23 +356,34 @@ def report_html(sigs, stats) -> str:
     rep = json.loads(raw)
     out = (f'<div class="rep-head"><h2>{html.escape(rep["title"])}</h2>'
            f'<div class="asof">{rep["asof"]}</div></div>')
+    # 1) 동향 헤드라인(최신 지표) → 2) 분야별 보드 → 3) '한눈에' → 4) 상세는 접기
+    if dat is not None:
+        out += trend_headline(dat)
     out += category_board_html(sigs, rep.get("category_review", {}))
-    for sec in rep["sections"]:
+
+    def sec_html(sec):
         when = f'<span class="when">{html.escape(sec["when"])}</span>' if sec.get("when") else ""
-        out += f'<section class="rsec"><h3>{html.escape(sec["h"])}{when}</h3>'
+        s = f'<section class="rsec"><h3>{html.escape(sec["h"])}{when}</h3>'
         t = sec.get("type", "para")
         if t == "table":
             cols = "".join(f"<th>{html.escape(c)}</th>" for c in sec["columns"])
-            body = ""
-            for row in sec["rows"]:
-                body += "<tr>" + "".join(f"<td>{c}</td>" for c in row) + "</tr>"
-            out += (f'<div class="tw"><table class="rt"><thead><tr>{cols}</tr></thead>'
-                    f'<tbody>{body}</tbody></table></div>')
+            body = "".join("<tr>" + "".join(f"<td>{c}</td>" for c in row) + "</tr>"
+                           for row in sec["rows"])
+            s += (f'<div class="tw"><table class="rt"><thead><tr>{cols}</tr></thead>'
+                  f'<tbody>{body}</tbody></table></div>')
         elif t == "bullets":
-            out += "<ul>" + "".join(f"<li>{it}</li>" for it in sec["items"]) + "</ul>"
+            s += "<ul>" + "".join(f"<li>{it}</li>" for it in sec["items"]) + "</ul>"
         else:
-            out += "".join(f'<p class="rp">{it}</p>' for it in sec["items"])
-        out += "</section>"
+            s += "".join(f'<p class="rp">{it}</p>' for it in sec["items"])
+        return s + "</section>"
+
+    secs = rep["sections"]
+    if secs:
+        out += sec_html(secs[0])  # '한눈에'는 기본 노출
+    if len(secs) > 1:
+        rest = "".join(sec_html(s) for s in secs[1:])
+        out += (f'<details class="rmore"><summary>상세 분석 펼치기 — 규제·시장·지역·금리·반도체 ({len(secs)-1})</summary>'
+                f'{rest}</details>')
     out += f'<p class="rdisc">{html.escape(rep.get("disclaimer", ""))}</p>'
     return out
 
@@ -385,7 +441,7 @@ def build():
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     doc = (TEMPLATE
            .replace("__DATA__", blob)
-           .replace("__REPORT__", report_html(news, stats))
+           .replace("__REPORT__", report_html(news, stats, dat))
            .replace("__PERSONAL__", personal_html(news))
            .replace("__FRAMES__", frames_html())
            .replace("__PUBLIC__", "1" if PUBLIC_ONLY else "0"))
@@ -412,7 +468,7 @@ TEMPLATE = r"""<!DOCTYPE html>
     --bg:#eef0f4;--surface:#fff;--navy:#1e2d44;--navy2:#33445f;--accent:#2f5d8a;
     --muted:#5f6873;--border:#e2e5ea;--red:#b8403d;--redbg:#f7ebeb;--amber:#876419;
     --amberbg:#f7f1e0;--radius:12px;--shadow:0 1px 3px rgba(20,30,50,.06),0 4px 16px rgba(20,30,50,.04);
-    --side:240px;
+    --side:240px;--up:#b8403d;--down:#2e7d52;
   }
   *{box-sizing:border-box}html,body{margin:0;height:100%}
   body{background:var(--bg);color:var(--navy);font-size:14px;line-height:1.55;
@@ -490,8 +546,8 @@ TEMPLATE = r"""<!DOCTYPE html>
   .meta{display:flex;align-items:center;gap:7px;margin-bottom:3px;flex-wrap:wrap}
   .date{color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums}
   .loc{font-size:11px;color:var(--accent);background:#eef2f7;border-radius:5px;padding:1px 7px;cursor:pointer}
-  .conf{font-size:11px;border-radius:5px;padding:1px 6px}
-  .conf.공식{color:#2e7d52;background:#eaf3ee}.conf.언론{color:#9a6b3a;background:#f3eee9}.conf.추정{color:var(--muted);background:#f0f1f3}
+  .conf{font-size:11px;padding:0 1px;color:var(--muted)}
+  .conf.공식{color:#2e7d52}.conf.언론{color:#9a6b3a}.conf.추정{color:var(--muted)}
   .bd{font-size:11px;padding:1px 7px;border-radius:5px;font-weight:600}
   .bd.red{background:var(--redbg);color:var(--red)}.bd.yellow{background:var(--amberbg);color:var(--amber)}
   .pr{font-size:11px;color:#2e7d52;font-weight:600;font-variant-numeric:tabular-nums}
@@ -549,6 +605,14 @@ TEMPLATE = r"""<!DOCTYPE html>
   .rsec .rp{margin:0 0 8px;font-size:13.5px;color:var(--navy2);line-height:1.65}
   .rsec .rp:last-child{margin-bottom:0}
   .rsec b{color:var(--navy)}
+  .rmore{margin:0 0 4px}
+  .rmore>summary{cursor:pointer;list-style:none;font-size:13px;font-weight:600;color:var(--accent);
+    padding:11px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    box-shadow:var(--shadow);user-select:none}
+  .rmore>summary::-webkit-details-marker{display:none}
+  .rmore>summary::before{content:"▸ ";color:var(--muted)}
+  .rmore[open]>summary{margin-bottom:12px}.rmore[open]>summary::before{content:"▾ "}
+  .rmore>summary:hover{border-color:var(--accent)}
   .rdisc{font-size:11px;color:var(--muted);margin:6px 2px 0;line-height:1.5}
   /* 동향 모니터링 */
   .msec{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
@@ -567,6 +631,23 @@ TEMPLATE = r"""<!DOCTYPE html>
   .sp-dot{fill:var(--accent);opacity:.45}
   .sp-last{fill:var(--navy)}
   .sp-zero{stroke:var(--border);stroke-width:1;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
+  .sp-line.up{stroke:var(--up)}.sp-line.down{stroke:var(--down)}
+  .sp-last.up{fill:var(--up)}.sp-last.down{fill:var(--down)}
+  .dlt{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .dlt.up{color:var(--up)}.dlt.down{color:var(--down)}.dlt.flat{color:var(--muted)}
+  /* 동향 헤드라인 배너 */
+  .thl{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:13px 18px;margin:0 0 12px}
+  .thl .thl-t{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.3px;margin-bottom:7px}
+  .thl .thl-g{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline}
+  .thl .thl-i{display:inline-flex;align-items:baseline;gap:5px;font-size:13.5px}
+  .thl .thl-i .k{color:var(--navy2);font-weight:600}
+  .thl .thl-i .v{font-weight:700;font-variant-numeric:tabular-nums}
+  .thl .thl-i .v.up{color:var(--up)}.thl .thl-i .v.down{color:var(--down)}.thl .thl-i .v.flat{color:var(--muted)}
+  .rec-dir{font-size:11px;font-weight:700;border-radius:5px;padding:1px 7px;margin-left:6px}
+  .rec-dir.up{color:var(--up);background:var(--redbg)}.rec-dir.down{color:var(--down);background:#eaf3ee}
+  .rec-dir.flat{color:var(--muted);background:#f0f1f3}
+  .cbdir{font-style:normal;font-weight:700;margin-left:5px}.cbdir.up{color:var(--up)}.cbdir.down{color:var(--down)}
   .recgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
   .rec{border:1px solid var(--border);border-radius:10px;padding:11px 13px;background:#fbfcfd}
   .rec-h{font-size:13.5px;font-weight:700;color:var(--navy);margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -936,16 +1017,28 @@ function sparkline(a){
   }).join("");
   var zero="";
   if(mn<0&&mx>0){ var zy=Y(0).toFixed(1); zero='<line x1="'+pad+'" y1="'+zy+'" x2="'+(w-pad)+'" y2="'+zy+'" class="sp-zero"/>'; }
+  var d=vals[n-1]-vals[0]; var dir=d>0?"up":d<0?"down":"";
   return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" aria-hidden="true">'
-    +zero+'<polyline class="sp-line" points="'+pts+'"/>'+dots+'</svg>';
+    +zero+'<polyline class="sp-line '+dir+'" points="'+pts+'"/>'
+    +dots.replace("sp-last","sp-last "+dir)+'</svg>';
+}
+// 두 지표값의 변화량 칩(▲/▼ + 절대 증감) — 방향을 한눈에
+function deltaChip(cur,prev){
+  if(!cur||!prev||cur.value==null||prev.value==null) return "";
+  var d=Math.round((cur.value-prev.value)*100)/100;
+  var cls=d>0?"up":d<0?"down":"flat", arr=d>0?"▲":d<0?"▼":"→";
+  var u=(cur.unit==="%"||cur.unit==="배"||cur.unit==="배수")?cur.unit:"";
+  var n=Math.abs(d).toLocaleString();
+  return '<span class="dlt '+cls+'" title="직전값 대비">'+arr+(d!==0?n+u:"")+'</span>';
 }
 function metricTile(metric,sido){
   var a=series(metric,sido); if(!a.length)return "";
-  var cur=a[a.length-1];
+  var cur=a[a.length-1], prev=a.length>1?a[a.length-2]:null;
   var spk=sparkline(a);
   var rangeLbl=a.length>1?('<span class="mt-rg">'+ymLabel(a[0].date)+'→'+ymLabel(cur.date)+'</span>'):'';
   return '<div class="mtile"><div class="mt-h"><span class="mt-n">'+esc(metric)+'</span>'
-    +'<a class="mt-v" href="'+esc(cur.url||"#")+'" target="_blank" rel="noopener" title="'+esc(cur.source||"")+'">'+fmtV(cur)+'</a></div>'
+    +'<span style="display:inline-flex;align-items:baseline;gap:6px">'+deltaChip(cur,prev)
+    +'<a class="mt-v" href="'+esc(cur.url||"#")+'" target="_blank" rel="noopener" title="'+esc(cur.source||"")+'">'+fmtV(cur)+'</a></span></div>'
     +(spk||'')
     +'<div class="mt-d">최신 '+esc(cur.date||"")+' · '+esc(cur.source||"")+' '+rangeLbl+'</div></div>';
 }
@@ -972,7 +1065,10 @@ function reconcile(sido){
   else if((dir==="보합"||dir==="하락")&&lean==="과열 강조") verdict=idxTxt+'인데 '+newsTxt+' → <b>뉴스 과장 주의</b>(지표 우선).';
   else if(dir==="상승"&&lean==="약세 강조") verdict=idxTxt+'인데 '+newsTxt+' → 뉴스가 <b>과도하게 신중</b>.';
   else verdict=idxTxt+' · '+newsTxt+' — 큰 괴리 없음.';
-  return '<div class="rec"><div class="rec-h">'+esc(sido)
+  var dcls=dir==="상승"?"up":dir==="하락"?"down":"flat";
+  var darr=dir==="상승"?"▲":dir==="하락"?"▼":dir==="보합"?"→":"";
+  var dirBadge=dir!=="지표 미수집"?'<span class="rec-dir '+dcls+'">'+darr+' '+dir+'</span>':'';
+  return '<div class="rec"><div class="rec-h">'+esc(sido)+dirBadge
     +(vol?' <span class="rec-vol">거래량 '+Math.round(vol.value).toLocaleString()+'건</span>':'')+'</div>'
     +'<div class="rec-v">'+verdict+'</div></div>';
 }
