@@ -31,8 +31,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Build static site
+      - name: Build static site (공개판 — 개인 보조탭/데이터 제외)
         run: python3 scripts/build_site.py
+        env:
+          APTHUB_PUBLIC: "1"
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:

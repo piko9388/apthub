@@ -319,31 +319,38 @@ def _latest_metric(dat, metric, sido):
     return xs[-1], (xs[-2] if len(xs) > 1 else None)
 
 
-def trend_headline(dat) -> str:
-    """한 줄 동향 헤드라인 — 지역별 주간 매매변동률 + 기준금리로 '어디로 가는가'를 즉시 표시."""
-    items = []
-    for sido, lbl in (("서울", "서울"), ("경기", "경기"), ("인천", "인천")):
-        cur, _ = _latest_metric(dat, "주간 매매변동률", sido)
-        if not cur:
-            continue
-        v = cur.value
-        cls = "up" if v > 0.02 else "down" if v < -0.02 else "flat"
-        arr = "▲" if v > 0.02 else "▼" if v < -0.02 else "→"
-        sign = "+" if v > 0 else ""
-        items.append(f'<span class="thl-i"><span class="k">{lbl}</span>'
-                     f'<span class="v {cls}">{arr} {sign}{round(v,2)}%/주</span></span>')
-    rate, rprev = _latest_metric(dat, "기준금리", "전국")
-    if rate:
-        if rprev and rate.value != rprev.value:
-            rc, ra = ("up", "▲") if rate.value > rprev.value else ("down", "▼")
-        else:
-            rc, ra = "flat", "→"
-        items.append(f'<span class="thl-i"><span class="k">기준금리</span>'
-                     f'<span class="v {rc}">{ra} {round(rate.value,2)}% {"동결" if rc=="flat" else ""}</span></span>')
-    if not items:
+def _kpi(dat, metric, sido, label, suffix):
+    """KPI 카드 1개 — 최신값 + 방향 화살표·색."""
+    cur, prev = _latest_metric(dat, metric, sido)
+    if not cur:
         return ""
-    return ('<div class="thl"><div class="thl-t">📈 지금 시장은 — 최신 공식 지표</div>'
-            f'<div class="thl-g">{"".join(items)}</div></div>')
+    v = cur.value
+    if prev and prev.value is not None:
+        d = v - prev.value
+        cls, arr = ("up", "▲") if d > 0.005 else ("down", "▼") if d < -0.005 else ("flat", "→")
+    else:
+        cls, arr = ("up", "▲") if v > 0.02 else ("down", "▼") if v < -0.02 else ("flat", "→")
+    sign = "+" if (v > 0 and "/주" in suffix) else ""  # 변동률만 부호 표기(금리 등 수준값 제외)
+    return (f'<div class="kpi"><div class="kpi-k">{html.escape(label)}</div>'
+            f'<div class="kpi-v {cls}">{arr} {sign}{round(v,2)}{suffix}</div></div>')
+
+
+def trend_headline(dat, verdict="") -> str:
+    """동향 헤드라인 — '오늘의 결론' 1문장 + 핵심 KPI 4개(30초 판단용)."""
+    kpis = [
+        _kpi(dat, "주간 매매변동률", "서울", "서울 매매", "%/주"),
+        _kpi(dat, "주간 전세변동률", "서울", "서울 전세", "%/주"),
+        _kpi(dat, "기준금리", "전국", "기준금리", "%"),
+        '<div class="kpi"><div class="kpi-k">대출규제</div>'
+        '<div class="kpi-v flat" title="6·28 가계부채 관리방안">주담대 6억 상한</div></div>',
+    ]
+    kpis = [k for k in kpis if k]
+    if not kpis and not verdict:
+        return ""
+    vd = (f'<div class="thl-vd"><span class="thl-vd-b">오늘의 결론</span> {html.escape(verdict)}</div>'
+          if verdict else "")
+    return ('<div class="thl"><div class="thl-t">📈 지금 시장은</div>'
+            f'{vd}<div class="kpigrid">{"".join(kpis)}</div></div>')
 
 
 def report_html(sigs, stats, dat=None) -> str:
@@ -358,7 +365,7 @@ def report_html(sigs, stats, dat=None) -> str:
            f'<div class="asof">{rep["asof"]}</div></div>')
     # 1) 동향 헤드라인(최신 지표) → 2) 분야별 보드 → 3) '한눈에' → 4) 상세는 접기
     if dat is not None:
-        out += trend_headline(dat)
+        out += trend_headline(dat, rep.get("verdict", ""))
     out += category_board_html(sigs, rep.get("category_review", {}))
 
     def sec_html(sec):
@@ -413,6 +420,7 @@ def build():
     yellows = sum(1 for s in news if s.trigger == "yellow")
     data = {
         "updated": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "today": datetime.now().strftime("%Y-%m-%d"),
         "total": len(news), "reds": reds, "yellows": yellows,
         "data_count": len(dat), "public": PUBLIC_ONLY,
         "sig": [client_signal(s) for s in news],
@@ -548,6 +556,8 @@ TEMPLATE = r"""<!DOCTYPE html>
   .loc{font-size:11px;color:var(--accent);background:#eef2f7;border-radius:5px;padding:1px 7px;cursor:pointer}
   .conf{font-size:11px;padding:0 1px;color:var(--muted)}
   .conf.공식{color:#2e7d52}.conf.언론{color:#9a6b3a}.conf.추정{color:var(--muted)}
+  .fut{font-size:10px;font-weight:700;color:var(--amber);background:var(--amberbg);
+    border-radius:4px;padding:1px 5px;margin-right:5px;vertical-align:1px}
   .bd{font-size:11px;padding:1px 7px;border-radius:5px;font-weight:600}
   .bd.red{background:var(--redbg);color:var(--red)}.bd.yellow{background:var(--amberbg);color:var(--amber)}
   .pr{font-size:11px;color:#2e7d52;font-weight:600;font-variant-numeric:tabular-nums}
@@ -638,12 +648,16 @@ TEMPLATE = r"""<!DOCTYPE html>
   /* 동향 헤드라인 배너 */
   .thl{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
     box-shadow:var(--shadow);padding:13px 18px;margin:0 0 12px}
-  .thl .thl-t{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.3px;margin-bottom:7px}
-  .thl .thl-g{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline}
-  .thl .thl-i{display:inline-flex;align-items:baseline;gap:5px;font-size:13.5px}
-  .thl .thl-i .k{color:var(--navy2);font-weight:600}
-  .thl .thl-i .v{font-weight:700;font-variant-numeric:tabular-nums}
-  .thl .thl-i .v.up{color:var(--up)}.thl .thl-i .v.down{color:var(--down)}.thl .thl-i .v.flat{color:var(--muted)}
+  .thl .thl-t{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.3px;margin-bottom:8px}
+  .thl .thl-vd{font-size:14.5px;line-height:1.6;color:var(--navy);font-weight:600;margin-bottom:12px}
+  .thl .thl-vd-b{display:inline-block;font-size:11px;font-weight:700;color:#fff;background:var(--accent);
+    border-radius:5px;padding:1px 7px;margin-right:6px;vertical-align:1px}
+  .thl .kpigrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  @media(min-width:560px){.thl .kpigrid{grid-template-columns:repeat(4,1fr)}}
+  .thl .kpi{background:#fbfcfd;border:1px solid var(--border);border-radius:9px;padding:8px 11px}
+  .thl .kpi-k{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:3px}
+  .thl .kpi-v{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25}
+  .thl .kpi-v.up{color:var(--up)}.thl .kpi-v.down{color:var(--down)}.thl .kpi-v.flat{color:var(--navy)}
   .rec-dir{font-size:11px;font-weight:700;border-radius:5px;padding:1px 7px;margin-left:6px}
   .rec-dir.up{color:var(--up);background:var(--redbg)}.rec-dir.down{color:var(--down);background:#eaf3ee}
   .rec-dir.flat{color:var(--muted);background:#f0f1f3}
@@ -801,6 +815,8 @@ TEMPLATE = r"""<!DOCTYPE html>
 var DATA = __DATA__;
 var PUBLIC = "__PUBLIC__" === "1";
 var SIG = DATA.sig, REG = DATA.regions, MET = DATA.met||[], CATALOG = DATA.cat||[];
+var TODAY = DATA.today || "";
+function futBadge(d){return (d&&TODAY&&d>TODAY)?'<span class="fut" title="발표·시행 예정(현재 미래 일자)">예정</span>':'';}
 var S = {view:"report", sido:null, gu:null, cat:"", trig:null, q:"", sort:"date_desc", wcat:""};
 var CAT={policy:"정책·세제",price:"시세·실거래",macro:"금리·거시",semicon:"반도체"};
 var CONF={"공식":"● 공식","언론":"◐ 언론","추정":"○ 추정"};
@@ -855,10 +871,12 @@ function buildSidebar(){
     +'<li><b>동향 모니터링</b> — 공식 지표(부동산원·KB·한은·국토부)를 추이 그래프로 보고 뉴스와 정합, 과장 여부 판별</li>'
     +'<li><b>주차별 정리</b> — 주 단위 흐름 요약 + 분야별 분류, 펼치면 일자별 전체</li>'
     +'<li><b>지역별 보기</b> — 좌측·지도에서 시·도·구 선택, 칩으로 분류 필터, 검색</li>'
-    +'<li><b>🔴 즉시</b> — 대출·세제·규제지역 등 <b>제도 변경</b>이나 <b>기준금리 변경</b>, 주요 단지 <b>신고가</b> 등 시장 전체에 즉시 영향. 발견 즉시 확인.</li>'
-    +'<li><b>🟡 주목</b> — 코픽스·주담대 금리 변동, 공급·입주·분양, 정비사업 진전 등 <b>추세 점검</b>이 필요한 사안(주간 단위).</li>'
-    +'<li><b>출처</b> — ● 공식(정부·기관) · ◐ 언론 · ○ 추정 순 신뢰도</li>'
-    +'<li><b>참고용</b> — 매수·매도 판단 보조 자료, 투자 권유 아님</li>'
+    +'<li><b>🔴 즉시 영향</b> — 대출·세제·규제지역 등 <b>제도 변경</b>·<b>기준금리 변경</b>·주요 단지 <b>신고가</b>. 영향 기간 <b>즉시~6개월</b>, 발견 즉시 확인.</li>'
+    +'<li><b>🟡 추세 관찰</b> — 코픽스·주담대 금리, 공급·입주·분양, 정비사업 진전. 영향 기간 <b>6~24개월</b>, 주간 단위 점검.</li>'
+    +'<li><b>⚪ 참고</b> — 그 외 배경·심리 신호.</li>'
+    +'<li><b>출처 신뢰도</b> — ● 공식(정부·기관·실거래) · ◐ 언론(보도) · ○ 추정(자체 해석) 순. 헤드라인 KPI는 공식만 사용.</li>'
+    +'<li><b>예정</b> 배지 — 발표·시행 예정(현재 미래 일자) 신호.</li>'
+    +'<li><b>참고용</b> — 매수·매도 판단 보조 자료, 투자 권유 아님.</li>'
     +'</ul></details>'
     +'<div class="madeby">제작·문의 <b>이정훈</b><br><a href="mailto:piko9388@gmail.com">piko9388@gmail.com</a></div>'
     +'</div>';
@@ -918,7 +936,7 @@ function cardHTML(s){
   var pr=s.price!=null?'<span class="pr">매매 '+s.price+'억</span>':"";
   var cmt=s.comment?'<p class="cmt"><b>해석</b> '+esc(s.comment)+'</p>':"";
   var src=s.url?'<a class="src" href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(s.source)+' ↗</a>':'<span class="src">'+esc(s.source)+'</span>';
-  return '<article class="card"><div class="meta"><span class="date">'+esc(s.date)+'</span>'
+  return '<article class="card"><div class="meta"><span class="date">'+esc(s.date)+'</span>'+futBadge(s.date)
     +'<span class="loc" data-sido="'+esc(s.sido)+'" data-gu="'+esc(s.gu)+'">'+esc(loc)+'</span>'
     +'<span class="conf '+s.conf+'">'+CONF[s.conf]+'</span>'+pr+bd+'</div>'
     +'<h3>'+esc(s.title)+'</h3><p class="sum">'+esc(s.summary)+'</p>'+cmt
@@ -1230,7 +1248,7 @@ function addDays(ds,n){var d=new Date(ds+"T00:00:00");d.setDate(d.getDate()+n);r
 function isoWeek(ds){var d=new Date(ds+"T00:00:00");var t=new Date(d);t.setDate(d.getDate()+3-((d.getDay()+6)%7));var w1=new Date(t.getFullYear(),0,4);var n=1+Math.round(((t-w1)/864e5-3+((w1.getDay()+6)%7))/7);return (n<10?"0":"")+n;}
 function sigLine(s){
   return '<li><span class="wb">'+(s.trig==="red"?"🔴":s.trig==="yellow"?"🟡":"·")+'</span>'
-    +'<span class="d">'+esc(s.date)+'</span> '
+    +'<span class="d">'+esc(s.date)+'</span> '+futBadge(s.date)
     +(s.url?'<a class="tl" href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(s.title)+'</a>':esc(s.title))
     +(s.gu?' <span class="loc2">'+esc(s.sido+" "+s.gu)+'</span>':'')+'</li>';
 }
@@ -1254,7 +1272,7 @@ function weekSummary(arr){
 }
 function sigLineND(s){   // 날짜 생략(일자 헤더에 표시) · 카테고리 태그 부착
   return '<li><span class="wtag '+esc(s.cat||"")+'">'+esc(CAT[s.cat]||s.cat||"-")+'</span>'
-    +'<span class="wb">'+(s.trig==="red"?"🔴":s.trig==="yellow"?"🟡":"·")+'</span>'
+    +'<span class="wb">'+(s.trig==="red"?"🔴":s.trig==="yellow"?"🟡":"·")+'</span>'+futBadge(s.date)
     +(s.url?'<a class="tl" href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(s.title)+'</a>':esc(s.title))
     +(s.gu?' <span class="loc2">'+esc(s.sido+" "+s.gu)+'</span>':'')+'</li>';
 }
