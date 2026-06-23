@@ -1,0 +1,90 @@
+name: Weekly official data crawl (무료 공식 지표 자동수집)
+
+# 매주 1회 정부 공식 API(RTMS 실거래·ECOS 기준금리)를 무료로 수집해
+# data/seed/auto-official-latest.json 으로 커밋한다. 데이터가 바뀌면
+# pages.yml(데이터 경로 트리거)이 자동으로 사이트를 재배포한다.
+#
+# 비용: 공개 레포의 GitHub Actions는 무료(무제한 분), 정부 API도 무료 → $0.
+# LLM 기반 뉴스 크롤링은 유료라 자동화 대상이 아니다(수동/챗 큐레이션 유지).
+#
+# 사전 준비(1회): 레포 Settings → Secrets and variables → Actions 에 추가
+#   - RTMS_KEY : data.go.kr #1613000(아파트 매매 실거래가) 활용신청 후 "Decoding" 인증키
+#   - ECOS_KEY : ecos.bok.or.kr 인증키 신청(무료)
+# 키가 없으면 이 워크플로는 경고만 남기고 조용히 건너뛴다(실패하지 않음).
+
+on:
+  schedule:
+    - cron: "0 21 * * 0"   # 매주 일요일 21:00 UTC = 월요일 06:00 KST
+  workflow_dispatch:        # 수동 실행(테스트)용
+
+permissions:
+  contents: write           # 수집 결과를 main에 커밋
+
+concurrency:
+  group: crawl
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 키 확인(없으면 건너뜀)
+        id: guard
+        env:
+          RTMS_KEY: ${{ secrets.RTMS_KEY }}
+          ECOS_KEY: ${{ secrets.ECOS_KEY }}
+        run: |
+          if [ -z "$RTMS_KEY" ] && [ -z "$ECOS_KEY" ]; then
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+            echo "::warning::RTMS_KEY/ECOS_KEY 미설정 — 자동수집 건너뜀. 레포 Secrets에 무료 키를 등록하세요."
+          fi
+
+      - name: 공식 지표 수집(최근 4개월 시계열)
+        if: steps.guard.outputs.skip != '1'
+        env:
+          RTMS_KEY: ${{ secrets.RTMS_KEY }}
+          ECOS_KEY: ${{ secrets.ECOS_KEY }}
+        run: |
+          set -e
+          MONTHS=$(python3 - <<'PY'
+          import datetime
+          d=datetime.date.today().replace(day=1)
+          out=[]
+          for _ in range(4):
+              out.append(d.strftime("%Y%m"))
+              d=(d-datetime.timedelta(days=1)).replace(day=1)
+          print(" ".join(out))
+          PY
+          )
+          echo "수집 대상 월: $MONTHS"
+          SRC=""
+          [ -n "$RTMS_KEY" ] && SRC="$SRC --rtms"
+          [ -n "$ECOS_KEY" ] && SRC="$SRC --ecos"
+          echo "소스: $SRC"
+          python3 scripts/apthub_official_apis.py $SRC --months $MONTHS \
+            --out data/seed/auto-official-latest.json || \
+            echo "::warning::수집 중 일부 오류(네트워크/쿼터) — 가능한 분량만 반영"
+
+      - name: 빌드 검증(공개판)
+        if: success() && steps.guard.outputs.skip != '1'
+        env:
+          APTHUB_PUBLIC: "1"
+        run: python3 scripts/build_site.py
+
+      - name: 변경분 커밋(있을 때만)
+        if: success() && steps.guard.outputs.skip != '1'
+        run: |
+          git config user.name  "apthub-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/seed/auto-official-latest.json
+          if git diff --staged --quiet; then
+            echo "변경 없음 — 커밋 생략"
+          else
+            git commit -m "chore(data): 주간 공식 지표 자동 수집(RTMS·ECOS)"
+            git push
+          fi
