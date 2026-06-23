@@ -46,7 +46,17 @@ TRUST = {
              "dataeconomy.co.kr", "rcast.co.kr", "conslove.co.kr", "karnews.or.kr",
              "youthassembly.kr", "mygoyang.com", "news1.kr", "newdaily.co.kr",
              "choicestock.co.kr", "incheonin.com", "news-wa.com", "mstoday.co.kr",
-             "seouleconews.com", "tradingeconomics.com", "kfenews.co.kr"],
+             "seouleconews.com", "tradingeconomics.com", "kfenews.co.kr",
+             # 주요 종합·경제지/통신사 보강(정상 언론이 '추정'으로 잘못 분류되던 문제 수정)
+             "yna.co.kr", "yonhapnews.co.kr", "chosun.com", "joongang.co.kr", "donga.com",
+             "sedaily.com", "hani.co.kr", "khan.co.kr", "newspim.com", "asiae.co.kr",
+             "dailian.co.kr", "thebell.co.kr", "bizhankook.com", "imaeil.com",
+             "joongboo.com", "elderlypress.co.kr", "ytn.co.kr", "sbs.co.kr",
+             "kbs.co.kr", "imbc.com", "businesspost.co.kr", "moneys.co.kr",
+             "joseilbo.com", "sentv.co.kr", "tf.co.kr", "ohmynews.com", "pressian.com",
+             "segye.com", "kmib.co.kr", "munhwa.com", "hankookilbo.com", "wowtv.co.kr",
+             "mbn.co.kr", "sisajournal.com", "ajunews.com", "g-enews.com", "ebn.co.kr",
+             "inews24.com", "zdnet.co.kr", "biz.chosun.com"],
 }
 
 
