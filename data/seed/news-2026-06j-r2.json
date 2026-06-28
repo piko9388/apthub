@@ -1,0 +1,754 @@
+[
+ {
+  "kind": "news",
+  "title": "은행권 주택담보대출 -0.7조원 (2025-12·금융위)",
+  "source": "금융위원회 2025년 가계대출 동향",
+  "url": "https://www.fsc.go.kr/no010101/86047",
+  "date": "2025-12-31",
+  "summary": "2025년 12월중 은행권 주택담보대출 △0.7조원 감소(전월 +0.8조원에서 감소 전환). 전 금융권 가계대출은 △1.5조원 감소",
+  "category": "macro",
+  "sido": "전국",
+  "confidence": "공식"
+ },
+ {
+  "kind": "news",
+  "title": "서울 아파트 평균 매매가 14.06억 (2025-07·KB)",
+  "source": "KB부동산 월간 주택가격동향",
+  "url": "https://www.newsis.com/view/NISX20251228_0003456751",
+  "date": "2025-07-31",
+  "summary": "2025년 7월 서울 아파트 평균 매매가 14억572만원, 첫 14억 돌파.",
+  "category": "price",
+  "sido": "서울",
+  "confidence": "공식"
+ },
+ {
+  "kind": "news",
+  "title": "서울 아파트 평균 매매가 15.08억 (2025-12·KB)",
+  "source": "KB부동산 월간 주택가격동향",
+  "url": "https://www.newsis.com/view/NISX20251228_0003456751",
+  "date": "2025-12-31",
+  "summary": "2025년 12월 서울 아파트 평균 매매가 15억810만원, 첫 15억 돌파.",
+  "category": "price",
+  "sido": "서울",
+  "confidence": "공식"
+ },
+ {
+  "kind": "news",
+  "title": "서울 아파트 중위 매매가 11.06억 (2025-12·KB)",
+  "source": "KB부동산 월간 주택가격동향",
+  "url": "https://www.newsis.com/view/NISX20251228_0003456751",
+  "date": "2025-12-31",
+  "summary": "2025년 12월 서울 아파트 중위 매매가 11억556만원, 첫 11억 돌파.",
+  "category": "price",
+  "sido": "서울",
+  "confidence": "공식"
+ },
+ {
+  "kind": "news",
+  "title": "서울 5분위 평당가 1억2411만원 (2026-04·KB)",
+  "source": "KB부동산 월간 주택가격동향",
+  "url": "https://www.kmib.co.kr/article/view.asp?arcid=0029762519&code=61141511&sid1=eco",
+  "date": "2026-04-30",
+  "summary": "2026년 4월 서울 5분위 아파트 평당 평균 1억2411만원.",
+  "category": "price",
+  "sido": "서울",
+  "confidence": "공식"
+ },
+ {
+  "kind": "news",
+  "title": "서울 3분위 평당가 5046만원 (2026-04·KB)",
+  "source": "KB부동산 월간 주택가격동향",
+  "url": "https://www.kmib.co.kr/article/view.asp?arcid=0029762519&code=61141511&sid1=eco",
+  "date": "2026-04-30",
+  "summary": "2026년 4월 서울 3분위 아파트 평당 평균 5046만원.",
+  "category": "price",
+  "sido": "서울",
+  "confidence": "공식"
+ },
+ {
+  "kind": "news",
+  "title": "서울 1분위 평당가 2597만원 (2026-04·KB)",
+  "source": "KB부동산 월간 주택가격동향",
+  "url": "https://www.kmib.co.kr/article/view.asp?arcid=0029762519&code=61141511&sid1=eco",
+  "date": "2026-04-30",
+  "summary": "2026년 4월 서울 1분위 아파트 평당 평균 2597만원.",
+  "category": "price",
+  "sido": "서울",
+  "confidence": "공식"
+ },
+ {
+  "title": "서울 강남구 압구정동 신현대11차 183㎡ 94억 주간 최고가",
+  "source": "비즈한국",
+  "url": "https://www.bizhankook.com/bk/article/32587",
+  "date": "2026-06-15",
+  "summary": "압구정 신현대11차 전용 183.41㎡ 4층이 94억원에 거래되며 6월 3주차 서울 주간 최고가.",
+  "category": "price",
+  "comment": "압구정 재건축 기대가 초고가 대형에 반영."
+ },
+ {
+  "title": "서울 강남구 대치동 래미안대치팰리스 92㎡ 44.5억",
+  "source": "비즈한국",
+  "url": "https://www.bizhankook.com/bk/article/32587",
+  "date": "2026-06-16",
+  "summary": "대치 래미안대치팰리스 전용 91.89㎡ 20층이 44억5000만원에 거래.",
+  "category": "price",
+  "comment": "학군 선호 대단지 대형 평형 강세 지속."
+ },
+ {
+  "title": "서울 송파구 잠실동 리센츠 99㎡ 38억",
+  "source": "비즈한국",
+  "url": "https://www.bizhankook.com/bk/article/32587",
+  "date": "2026-06-17",
+  "summary": "잠실 리센츠 전용 98.55㎡ 11층이 38억원에 거래(3.3㎡당 약 1억2747만원).",
+  "category": "price",
+  "comment": "잠실 대장 단지 평당가 1억 돌파 흐름."
+ },
+ {
+  "title": "서울 송파구 신천동 장미2 82㎡ 32.4억",
+  "source": "비즈한국",
+  "url": "https://www.bizhankook.com/bk/article/32587",
+  "date": "2026-06-16",
+  "summary": "신천 장미2차 전용 82.45㎡ 3층이 32억4000만원에 거래.",
+  "category": "price",
+  "comment": "잠실 인접 재건축 단지 매수세 반영."
+ },
+ {
+  "title": "서울 송파구 문정동 올림픽훼밀리타운 136㎡ 29.5억",
+  "source": "비즈한국",
+  "url": "https://www.bizhankook.com/bk/article/32587",
+  "date": "2026-06-18",
+  "summary": "문정 올림픽훼밀리타운 전용 136.3㎡가 29억5000만원에 거래.",
+  "category": "price",
+  "comment": "대형 평형 실수요·재건축 기대."
+ },
+ {
+  "title": "서울 양천구 목동 목동신시가지7 101㎡ 32.5억",
+  "source": "비즈한국",
+  "url": "https://www.bizhankook.com/bk/article/32536",
+  "date": "2026-06-10",
+  "summary": "목동신시가지7단지 전용 101.2㎡가 32억5000만원에 거래(평당 약 1억616만원).",
+  "category": "price",
+  "comment": "목동 재건축 기대가 평당가 끌어올림."
+ },
+ {
+  "title": "서울 영등포구 여의도동 대교 96㎡ 30.5억",
+  "source": "비즈한국",
+  "url": "https://www.bizhankook.com/bk/article/32536",
+  "date": "2026-06-11",
+  "summary": "여의도 대교 전용 95.5㎡가 30억5000만원에 거래.",
+  "category": "price",
+  "comment": "여의도 정비사업 기대 반영."
+ },
+ {
+  "title": "서울 영등포구 여의도동 한양 109㎡ 30억",
+  "source": "비즈한국",
+  "url": "https://www.bizhankook.com/bk/article/32536",
+  "date": "2026-06-11",
+  "summary": "여의도 한양 전용 109.42㎡가 30억원에 거래.",
+  "category": "price",
+  "comment": "여의도 노후 단지 재건축 모멘텀."
+ },
+ {
+  "title": "서울 영등포구 여의도동 시범 116㎡ 41억 신고가",
+  "source": "한국경제",
+  "url": "https://v.daum.net/v/20260415163112822",
+  "date": "2026-06-12",
+  "summary": "여의도 시범아파트 47평형이 41억 신고가 거래, 65층 재건축 랜드마크 기대.",
+  "category": "price",
+  "comment": "여의도 최대어 시범 재건축 본격화 기대."
+ },
+ {
+  "title": "서울 강동구 고덕동 래미안힐스테이트고덕 84㎡ 19.5억",
+  "source": "네이트뉴스",
+  "url": "https://m.news.nate.com/view/20260508n14935",
+  "date": "2026-06-05",
+  "summary": "고덕 래미안힐스테이트고덕 전용 84㎡ 17층이 19억5000만원대에 거래.",
+  "category": "price",
+  "comment": "고덕 대단지 국평 20억 근접."
+ },
+ {
+  "title": "서울 도봉구 6월 0.46% 상승…7년9개월 만 최고폭",
+  "source": "헤럴드경제",
+  "url": "https://biz.heraldcorp.com/article/10788156",
+  "date": "2026-06-20",
+  "summary": "도봉구 아파트값 6월 0.46% 상승, 창·방학동 역세권 위주로 7년9개월 만에 최고 상승폭.",
+  "category": "price",
+  "comment": "서울 외곽 중저가 단지 키맞추기."
+ },
+ {
+  "title": "서울 성북구 6월 0.41% 상승…종암·정릉 대단지 위주",
+  "source": "헤럴드경제",
+  "url": "https://biz.heraldcorp.com/article/10788156",
+  "date": "2026-06-20",
+  "summary": "성북구 아파트값 6월 0.41% 상승, 종암·정릉 대단지 위주.",
+  "category": "price",
+  "comment": "실거주 수요로 외곽 상승세 확산."
+ },
+ {
+  "title": "서울 송파구 석촌동 주택 142.4억 주간 최고가",
+  "source": "비즈한국",
+  "url": "https://www.bizhankook.com/bk/article/32466",
+  "date": "2026-06-02",
+  "summary": "6월 1주차 서울 주거용 실거래 최고가는 송파 석촌동 주택 142억4100만원.",
+  "category": "price",
+  "comment": "고가 단독·대형 주택도 상위권 등장."
+ },
+ {
+  "title": "서울 6월 신고가 220건·전 자치구 상승",
+  "source": "비즈한국",
+  "url": "https://www.bizhankook.com/bk/article/32587",
+  "date": "2026-06-20",
+  "summary": "6월 20일 기준 전국 신고 1769건 중 신고가 220건, 서울 전 자치구 상승.",
+  "category": "price",
+  "comment": "강남권·정비사업지 중심 신고가 확산."
+ },
+ {
+  "title": "경기 성남 분당 판교원2단지푸르지오 115㎡ 21.9억",
+  "source": "국토교통부 실거래가",
+  "url": "https://rt.molit.go.kr/",
+  "date": "2026-06-03",
+  "summary": "판교원2단지푸르지오 전용 115.19㎡가 21억9000만원에 거래.",
+  "category": "price",
+  "comment": "판교 중대형 실거래 견조."
+ },
+ {
+  "title": "경기 성남 분당 판교원마을한림풀에버9단지 72㎡ 16.6억",
+  "source": "국토교통부 실거래가",
+  "url": "https://rt.molit.go.kr/",
+  "date": "2026-06-10",
+  "summary": "판교원마을한림풀에버9단지 전용 71.84㎡가 16억6000만원에 거래.",
+  "category": "price",
+  "comment": "판교 중소형 매수세 지속."
+ },
+ {
+  "title": "경기 분당, 1기 신도시 재건축 기대에 신고가 행진",
+  "source": "서울경제",
+  "url": "https://www.sedaily.com/NewsView/2GOTQR87Y1",
+  "date": "2026-06-18",
+  "summary": "분당 1기 신도시 재건축 기대로 판교까지 가격 동반 상승.",
+  "category": "price",
+  "comment": "선도지구 재건축 모멘텀 확산."
+ },
+ {
+  "title": "경기 안양 평촌 꿈마을한신 96㎡ 16.9억 신고가",
+  "source": "중부일보",
+  "url": "https://www.joongboo.com/news/articleView.html?idxno=363728703",
+  "date": "2026-06-12",
+  "summary": "평촌 꿈마을한신 전용 96㎡가 16억9000만원 역대 최고가, 1년 전 대비 +4.4억.",
+  "category": "price",
+  "comment": "서울 이탈 수요로 평촌 신고가 행진."
+ },
+ {
+  "title": "경기 안양 평촌 6월 평균 매매가 1년새 14.9% 상승",
+  "source": "중부일보",
+  "url": "https://www.joongboo.com/news/articleView.html?idxno=363728703",
+  "date": "2026-06-12",
+  "summary": "안양 평균 매매가 7억9096만원으로 전년 동월 대비 14.9% 상승.",
+  "category": "price",
+  "comment": "평촌 키맞추기 본격화."
+ },
+ {
+  "title": "경기 광명 상반기 누적 8.19% 상승",
+  "source": "이데일리",
+  "url": "https://www.edaily.co.kr/News/Read?newsId=02410806645481392",
+  "date": "2026-06-20",
+  "summary": "광명 상반기 누적 8.19% 상승, 수도권 상승률 상위.",
+  "category": "price",
+  "comment": "서울 인접 정비사업지 강세."
+ },
+ {
+  "title": "경기 하남 상반기 누적 6.76% 상승",
+  "source": "이데일리",
+  "url": "https://www.edaily.co.kr/News/Read?newsId=02410806645481392",
+  "date": "2026-06-20",
+  "summary": "하남 상반기 누적 6.76% 상승, 미사·교산 기대 반영.",
+  "category": "price",
+  "comment": "하남 교통·신도시 호재 지속."
+ },
+ {
+  "title": "경기 화성 동탄 6월 한 주 1.98% 상승",
+  "source": "이데일리",
+  "url": "https://www.edaily.co.kr/News/Read?newsId=02410806645481392",
+  "date": "2026-06-20",
+  "summary": "화성 동탄 주간 1.98% 상승, 수도권 최상위 상승폭.",
+  "category": "price",
+  "comment": "동탄 상승세 과열 양상."
+ },
+ {
+  "title": "경기 용인 수지 성복역롯데캐슬골드타운 84㎡ 17.1억 신고가",
+  "source": "이코노미스트",
+  "url": "https://economist.co.kr/article/view/ecn202603120014",
+  "date": "2026-06-15",
+  "summary": "성복역롯데캐슬골드타운 전용 84㎡가 17억1000만원에 신고가 경신.",
+  "category": "price",
+  "comment": "반도체 호황·셔세권 부각으로 수지 강세."
+ },
+ {
+  "title": "인천 서구 원당동 우미린더시그니처 85㎡ 7.56억 신고가",
+  "source": "인천in",
+  "url": "https://www.incheonin.com/news/articleView.html?idxno=105986",
+  "date": "2026-06-15",
+  "summary": "검단 우미린더시그니처 전용 84.9㎡ 21층이 7억5600만원 신고가, 4월 대비 +4000만원.",
+  "category": "price",
+  "comment": "검단 분상제 단지 안전마진 부각."
+ },
+ {
+  "title": "인천 서구 원당동 검단신도시푸르지오더베뉴 76㎡ 6.55억 신고가",
+  "source": "인천in",
+  "url": "https://www.incheonin.com/news/articleView.html?idxno=105986",
+  "date": "2026-06-05",
+  "summary": "검단신도시푸르지오더베뉴 전용 75.8㎡ 15층이 6억5500만원 신고가.",
+  "category": "price",
+  "comment": "검단 국평 매수세 회복."
+ },
+ {
+  "title": "인천 서구 당하동 검단모아미래도엘리트파크 85㎡ 5.85억 신고가",
+  "source": "인천in",
+  "url": "https://www.incheonin.com/news/articleView.html?idxno=105986",
+  "date": "2026-06-10",
+  "summary": "검단 모아미래도엘리트파크 전용 84.7㎡ 5층이 5억8500만원, 1년여 만에 +1.25억 신고가.",
+  "category": "price",
+  "comment": "검단 외곽 단지까지 신고가 확산."
+ },
+ {
+  "title": "인천 연수구 송도동 더샵송도마리나베이 84㎡ 6.75억",
+  "source": "네이트뉴스",
+  "url": "https://news.nate.com/view/20260620n08310",
+  "date": "2026-06-14",
+  "summary": "송도 더샵송도마리나베이 전용 84㎡ 21층이 6억7500만원에 거래.",
+  "category": "price",
+  "comment": "송도 국평 회복세."
+ },
+ {
+  "title": "'눈 뜨면 신고가' 동탄, 규제지역 지정 초읽기…경기도 \"집중 모니터링\"",
+  "source": "뉴스핌",
+  "url": "https://www.newspim.com/news/view/20260619000900",
+  "date": "2026-06-19",
+  "summary": "동탄이 3개월 집값 3.8%, 6월 2주간 4%대 급등으로 조정대상지역·투기과열지구·토허구역 정량요건을 충족했고, 경기도는 면밀 모니터링 입장을 밝힘.",
+  "category": "policy",
+  "comment": "규제지역 지정은 시간문제이며, 지정 전 막차 매수가 가격을 더 밀어올리는 중."
+ },
+ {
+  "title": "\"집 안 보고도 산다\"… 동탄·기흥·구리, 규제 전 막차 매수 광풍",
+  "source": "세계일보",
+  "url": "https://segye.com/newsView/20260618516011",
+  "date": "2026-06-18",
+  "summary": "규제 임박 인식에 동탄·용인기흥·구리에서 임장 없이 계약하는 매수세가 몰리며 신고가가 속출.",
+  "category": "policy",
+  "comment": "규제 예고가 오히려 수요를 자극하는 전형적 풍선효과."
+ },
+ {
+  "title": "부동산 과열 동탄·기흥 '삼중규제' 긴장",
+  "source": "경인일보",
+  "url": "https://www.kyeongin.com/article/1765839",
+  "date": "2026-06-19",
+  "summary": "동탄·기흥 등에 조정대상지역·투기과열지구·토허구역의 삼중 규제 적용 가능성이 거론되며 시장 긴장이 고조.",
+  "category": "policy",
+  "comment": "중첩 규제는 거래 위축과 전월세 불안을 동시에 부를 수 있음."
+ },
+ {
+  "title": "집값 급등한 반도체 배후지…동탄·구리·기흥, 규제지역 지정되나",
+  "source": "경기일보",
+  "url": "https://www.kyeonggi.com/article/20260618580051",
+  "date": "2026-06-18",
+  "summary": "세 지역이 5월에 이어 6월에도 규제지역 필수 지정 요건(물가 1.3~1.5배 초과)을 충족, 주정심 개최 시 지정 추진 전망.",
+  "category": "policy",
+  "comment": "반도체 배후수요가 규제 트리거가 되는 구조."
+ },
+ {
+  "title": "동탄·구리·기흥 규제지역 지정 초읽기...이달도 규제 요건 충족",
+  "source": "금융소비자뉴스",
+  "url": "https://www.newsfc.co.kr/news/articleView.html?idxno=79361",
+  "date": "2026-06-19",
+  "summary": "대통령 유럽 순방 귀국 후 이르면 다음 주 주거정책심의위를 열어 규제지역·토허구역 지정을 추진할 것으로 시장이 전망.",
+  "category": "policy",
+  "comment": "지정 타이밍이 7월 세제개편과 겹치면 충격이 증폭될 수 있음."
+ },
+ {
+  "title": "\"동탄 20억 찍었는데 토허제 안 해요? 경기지사 손에 달렸다는데…\"",
+  "source": "문화일보",
+  "url": "https://www.munhwa.com/article/11596622",
+  "date": "2026-06-20",
+  "summary": "동탄 국평이 20억을 넘긴 가운데 토허구역 지정 권한이 경기도에 있어 국토부·경기도 협의가 변수로 부각.",
+  "category": "policy",
+  "comment": "토허제는 경기도 결정 사안이라 지정 시점에 불확실성이 큼."
+ },
+ {
+  "title": "20억 넘은 동탄 집값 '불기둥'…규제지역 지정론 확산",
+  "source": "파이낸셜뉴스",
+  "url": "https://www.fnnews.com/news/202606161327384525",
+  "date": "2026-06-16",
+  "summary": "동탄 전용 84㎡가 20억을 돌파하며 규제지역 지정론이 확산.",
+  "category": "policy",
+  "comment": "심리적 저항선 돌파로 규제 명분이 강화됨."
+ },
+ {
+  "title": "규제 전 막차 타기?…동탄 전역으로 번진 신고가 랠리",
+  "source": "파이낸셜뉴스",
+  "url": "https://www.fnnews.com/news/202606250400404724",
+  "date": "2026-06-25",
+  "summary": "동탄 매매가 상승폭이 6월 둘째주 1.98%로 급등하며 신고가 랠리가 동탄 전역으로 확산.",
+  "category": "policy",
+  "comment": "규제 직전 매수 쏠림이 단기 과열을 키우는 국면."
+ },
+ {
+  "title": "\"위약금 물고도 남는다\"…동탄 아파트 계약해제 3배 '급증'",
+  "source": "파이낸셜뉴스",
+  "url": "https://www.fnnews.com/news/202606221020050425",
+  "date": "2026-06-22",
+  "summary": "동탄 주간 계약해제가 6월 들어 32→35→45건으로 급증, 집주인들이 배액배상을 감수하며 매물을 거둬들임.",
+  "category": "policy",
+  "comment": "매물 잠김이 가격 상승을 가속하는 악순환."
+ },
+ {
+  "title": "규제 그물 밖 동탄·구리 '불기둥'…전세난·세제개편까지 3중 파고",
+  "source": "베타뉴스",
+  "url": "https://www.betanews.net/article/view/beta202606210002",
+  "date": "2026-06-21",
+  "summary": "대출·토허제·양도세 중과의 3중 규제 속에서도 동탄·구리가 풍선효과와 전세난이라는 역설적 결과를 보임.",
+  "category": "policy",
+  "comment": "규제 사각지대로의 유동성 이동이 핵심 리스크."
+ },
+ {
+  "title": "수도권·규제지역 주담대 조인다…28일부터 6억 원 넘게 못 받아",
+  "source": "대한민국 정책브리핑",
+  "url": "https://www.korea.kr/news/policyNewsView.do?newsId=148945077",
+  "date": "2026-06-27",
+  "summary": "6·28부터 수도권·규제지역 주담대 한도 6억 제한, 전입의무 부과, 생애최초 LTV 강화 등 가계부채 관리방안이 전 금융권으로 확대 시행.",
+  "category": "policy",
+  "comment": "갭투자·고가매수 차단을 노린 실수요 중심 재편."
+ },
+ {
+  "title": "6·28일부터 주담대 한도 제한(6억)·전입의무 부과 등 추가 조치 병행",
+  "source": "국토교통부",
+  "url": "https://www.molit.go.kr/USR/NEWS/m_71/dtl.jsp?lcmspage=1&id=95091036",
+  "date": "2026-06-27",
+  "summary": "가계대출 총량관리목표 축소와 함께 6·28일부터 주담대 6억 한도, 주택구입시 전입의무, 생애최초 주담대 규제 강화 등을 시행.",
+  "category": "policy",
+  "comment": "전입의무는 갭투자 봉쇄의 핵심 장치."
+ },
+ {
+  "title": "정부, 7월 정책 패키지에 전세대출 규제 강화 포함",
+  "source": "뉴스핌",
+  "url": "https://www.newspim.com/news/view/20260609000670",
+  "date": "2026-06-09",
+  "summary": "7월 부동산 세제 재정비에 다주택자 규제와 함께 전세대출 DSR 적용 등 대출수요 관리책이 일괄 추진될 전망.",
+  "category": "policy",
+  "comment": "전세대출 DSR 확대는 갭투자·레버리지 추가 차단 신호."
+ },
+ {
+  "title": "7월 '부동산 증세' 사실상 공식화 [이슈&뷰]",
+  "source": "헤럴드경제",
+  "url": "https://biz.heraldcorp.com/article/10783793",
+  "date": "2026-06-24",
+  "summary": "7월 말 세제개편안에 다주택자 종부세율 인상·공정시장가액비율 상향 등 보유세·양도세 강화가 담길 전망.",
+  "category": "policy",
+  "comment": "보유세 강화는 다주택 매물 출회 압박이지만 단기 잠김도 가능."
+ },
+ {
+  "title": "양도세 장특공제 줄이거나 폐지 유력… 종부세 과표 세분화 고심",
+  "source": "파이낸셜뉴스",
+  "url": "https://www.fnnews.com/news/202606231807522662",
+  "date": "2026-06-23",
+  "summary": "양도세 장기보유특별공제 축소·폐지와 종부세 과표 세분화가 7월 세제개편의 핵심으로 검토됨.",
+  "category": "policy",
+  "comment": "실거주 우대·보유 차익 과세 강화로 정책 방향 정리."
+ },
+ {
+  "title": "\"보유세 낮다\"…7월 부동산 세제 개편 '분수령'",
+  "source": "파이낸셜뉴스",
+  "url": "https://www.fnnews.com/news/202606270602018225",
+  "date": "2026-06-27",
+  "summary": "7월 세제개편이 하반기 집값의 분수령으로, 보유세 강화 방향이 굳어지는 분위기.",
+  "category": "policy",
+  "comment": "세제 강도에 따라 하반기 수도권 흐름이 갈릴 전망."
+ },
+ {
+  "title": "도심 주택공급 확대 및 신속화 방안 발표",
+  "source": "대한민국 정책브리핑",
+  "url": "https://www.korea.kr/briefing/policyBriefingView.do?newsId=156742030",
+  "date": "2026-06-25",
+  "summary": "국토부가 미매각 용지·노후 공공청사 등을 활용한 서울·수도권 도심 주택 공급 확대·신속화 방안을 발표.",
+  "category": "policy",
+  "comment": "수요 억제와 함께 공급 시그널을 병행하는 투트랙."
+ },
+ {
+  "title": "2030년까지 수도권 135만호·年 27만호 신규착공, 도심 내 공급 확대",
+  "source": "국토교통부",
+  "url": "https://www.molit.go.kr/USR/NEWS/m_71/dtl.jsp?lcmspage=1&id=95091185",
+  "date": "2026-06-25",
+  "summary": "2030년까지 수도권 135만호(연 27만호, 과거比 1.7배) 공급, 공공택지 LH 직접시행, 노후 공공청사·학교용지 활용 도심 공급을 제시.",
+  "category": "policy",
+  "comment": "공급 신뢰 회복이 규제 효과 지속의 관건."
+ },
+ {
+  "title": "연초부터 80조원 시장 열렸다…서울 정비사업 격돌 예고",
+  "source": "뉴스프라임",
+  "url": "https://www.newsprime.co.kr/news/article/?no=718952",
+  "date": "2026-06-22",
+  "summary": "2026년 정비사업 시장이 최대 80조원 규모로 확대되며 서울·수도권 거점 수주전이 본격화.",
+  "category": "policy",
+  "comment": "정비사업 활성화는 중장기 공급의 핵심 축."
+ },
+ {
+  "title": "7월부터 '대출 빙하기'…은행권, 한도 줄이고 창구 좁힌다",
+  "source": "뉴스핌",
+  "url": "https://www.newspim.com/news/view/20260626000907",
+  "date": "2026-06-26",
+  "summary": "하반기 가계대출 총량관리 강화 속 주요 은행이 MCI·MCG 취급 제한 등으로 한도를 축소하며 대출 문턱이 높아짐.",
+  "category": "policy",
+  "comment": "실수요자 현금 부담 증가로 매수여력 위축 예상."
+ },
+ {
+  "title": "KB국민은행, 모기지 보험 중단…서울 주담대 한도 5500만원 감소",
+  "source": "머니투데이",
+  "url": "https://www.mt.co.kr/finance/2026/06/23/2026062316581779875",
+  "date": "2026-06-23",
+  "summary": "KB국민은행이 6·26부터 MCI·MCG 취급을 제한해 서울 주담대 한도가 약 5500만원 줄어듦.",
+  "category": "policy",
+  "comment": "방공제 부활로 사실상 LTV 추가 축소 효과."
+ },
+ {
+  "title": "국민·농협 이어 하나은행도 주담대 한도 줄인다…MCI·MCG 제한",
+  "source": "머니투데이",
+  "url": "https://www.mt.co.kr/finance/2026/06/25/2026062518585671225",
+  "date": "2026-06-25",
+  "summary": "하나은행이 7·1부터 MCI·MCG 가입을 한시 제한, 주요 은행 전반으로 한도 축소가 확산.",
+  "category": "policy",
+  "comment": "전 은행권 동조화로 대출 빙하기가 현실화."
+ },
+ {
+  "title": "아파트도 '방공제' 시작, 대출 한도↓…'현금 장벽' 높아진다",
+  "source": "이코노미스트",
+  "url": "https://economist.co.kr/article/view/ecn202606240042",
+  "date": "2026-06-24",
+  "summary": "모기지보험 제한으로 아파트에도 법정 방공제(서울 5500만원)가 그대로 적용돼 실거주자도 한도가 차감됨.",
+  "category": "policy",
+  "comment": "실수요·신혼부부의 진입장벽이 더 높아짐."
+ },
+ {
+  "title": "\"대출이자 좀 줄어들까\"…7월부터 '법적비용' 빠진다는데 효과는",
+  "source": "뉴시스",
+  "url": "https://www.newsis.com/view/NISX20260626_0003685158",
+  "date": "2026-06-26",
+  "summary": "7·1부터 신규·갱신 대출에 지급준비금·예보료 등 법적비용을 가산금리에 반영 금지, 평균 0.2%p 인하 기대되나 체감 효과엔 회의론.",
+  "category": "policy",
+  "comment": "금리 인하 효과는 제한적, 총량규제 영향이 더 클 전망."
+ },
+ {
+  "title": "은행 가산금리 '깜깜이 인상' 막는다…금리 조정 前 사전공시 의무화",
+  "source": "파이낸셜뉴스",
+  "url": "https://www.fnnews.com/news/202606190656150773",
+  "date": "2026-06-19",
+  "summary": "은행연합회 모범규준 개정으로 7·1부터 가산금리 사전공시 의무화·법정비용 전가 금지·내부심사위 강화가 시행.",
+  "category": "policy",
+  "comment": "금리 투명성 제고가 목표지만 단기 한도엔 영향 적음."
+ },
+ {
+  "title": "한 은행 금통위 7월 16일 기준금리 2.75%로 0.25%p 인상 전망",
+  "source": "파이낸셜뉴스",
+  "url": "https://www.fnnews.com/news/202606180738469359",
+  "date": "2026-06-18",
+  "summary": "중동발 유가 상승으로 물가 상방 압력이 커지며 7·16 금통위에서 기준금리를 2.75%로 인상할 것이란 전망이 우세.",
+  "category": "macro",
+  "comment": "금리 인상은 대출 빙하기와 맞물려 수도권 매수심리에 직격."
+ },
+ {
+  "title": "한은 금리인상 사이클 100bp(최종금리 3.50%) 전망 - 6월 금융시장 브리프",
+  "source": "KDI 경제정보센터",
+  "url": "https://eiec.kdi.re.kr/policy/domesticView.do?ac=0000205444",
+  "date": "2026-06-20",
+  "summary": "한은이 하반기 2회(2.50→3.00%), 내년 상반기 2회 추가로 최종금리 3.50%까지 인상할 것이란 전망 제시.",
+  "category": "macro",
+  "comment": "긴축 장기화 시 레버리지 부동산 수요가 크게 위축."
+ },
+ {
+  "title": "시중은행 가계대출, 이달 들어 벌써 2.8조↑…'빚투'에 신용대출 1.6조 급증",
+  "source": "파이낸셜뉴스",
+  "url": "https://www.fnnews.com/news/202606130901115464",
+  "date": "2026-06-13",
+  "summary": "6월 11일까지 5대 은행 가계대출이 2.79조 증가, 코스피 강세에 신용대출이 급증하며 증가세 지속.",
+  "category": "macro",
+  "comment": "증시 빚투가 가계대출을 밀어올려 당국 규제 명분 강화."
+ },
+ {
+  "title": "이번주 국내 주요 금융일정(6.29~7.3)",
+  "source": "뉴스핌",
+  "url": "https://www.newspim.com/news/view/20260626000900",
+  "date": "2026-06-26",
+  "summary": "7월 초 6월 가계대출 동향·물가 발표 등 주요 금융일정이 예정돼 시장의 주목.",
+  "category": "macro",
+  "comment": "6월 가계대출·물가 수치가 7·16 금통위 결정의 가늠자."
+ },
+ {
+  "title": "[SK하이닉스 ADR] 용인 31조·청주 19조 투자…광주는 빠져",
+  "source": "뉴스핌",
+  "url": "https://www.newspim.com/news/view/20260625000290",
+  "date": "2026-06-25",
+  "summary": "SK하이닉스가 ADR로 최대 45조를 조달해 용인 1기 팹 31조, 청주 P&T7 19조, EUV 등 총 61.9조를 투입하되 광주 등 신규 지방거점은 제외.",
+  "category": "semicon",
+  "comment": "용인·청주 투자 집중은 동탄·청주 배후수요를 직접 자극."
+ },
+ {
+  "title": "SK하이닉스, 美 신주 ADR로 최대 45조원 조달…7월 10일 나스닥 상장 예정",
+  "source": "뉴시스",
+  "url": "https://www.newsis.com/view/NISX20260624_0003682300",
+  "date": "2026-06-24",
+  "summary": "SK하이닉스가 발행주식 2.5%(최대 1779만주)를 신주 ADR로 발행해 최대 45.45조를 조달, 7·10 나스닥 상장 예정.",
+  "category": "semicon",
+  "comment": "대규모 투자 실탄 확보로 용인 클러스터 가속화 기대."
+ },
+ {
+  "title": "[경제]SK하이닉스 7월 나스닥 본격 진출...ADR로 최대 45조 조달",
+  "source": "YTN",
+  "url": "https://www.ytn.co.kr/_ln/0102_202606242247258682",
+  "date": "2026-06-24",
+  "summary": "SK하이닉스가 7월 나스닥 ADR 상장으로 최대 45조를 조달, 자금을 용인 팹·청주 패키징·EUV에 투입.",
+  "category": "semicon",
+  "comment": "AI 메모리 슈퍼사이클 대응 자본 확충."
+ },
+ {
+  "title": "삼성전자, 평택캠퍼스 마지막 반도체 공장 본격 착공",
+  "source": "한국경제",
+  "url": "https://www.hankyung.com/article/2026062189891",
+  "date": "2026-06-21",
+  "summary": "삼성전자가 평택 P5 Fab2 착공을 7월로 6개월 앞당겨 추진, 월 20만~30만장 규모 메가팹으로 2029년 가동 목표.",
+  "category": "semicon",
+  "comment": "평택 투자 확대는 인근 동탄·용인 배후수요를 강화."
+ },
+ {
+  "title": "삼성전자, HBM4 올해 물량 완판…장기공급계약 추진 중",
+  "source": "뉴스1",
+  "url": "https://www.news1.kr/industry/general-industry/6154059",
+  "date": "2026-06-24",
+  "summary": "삼성전자가 올해 HBM4 생산능력을 모두 솔드아웃하고 장기공급계약을 추진, HBM 매출 3배 이상 증가 전망.",
+  "category": "semicon",
+  "comment": "실적·성과급 확대가 반도체 벨트 부동산 구매력으로 연결."
+ },
+ {
+  "title": "'삼전닉스' 성과급 67조 풀린다…동탄·용인 집값 벌써 꿈틀",
+  "source": "서울신문",
+  "url": "https://www.seoul.co.kr/news/economy/2026/05/24/20260524500078",
+  "date": "2026-05-24",
+  "summary": "삼성전자·SK하이닉스 올해 성과급 재원이 약 67.7조로 추산되며 동탄·용인 집값 상승 기대가 확산.",
+  "category": "semicon",
+  "comment": "성과급 유동성이 반세권 매수세의 직접 동력."
+ },
+ {
+  "title": "엔비디아가 원하는 메모리는 'HBM4'…韓 반도체 기업의 2026 골든타임",
+  "source": "피플코리아",
+  "url": "https://peoplekorea.press/ko-kr/articles/3982210",
+  "date": "2026-06-22",
+  "summary": "엔비디아의 HBM4 채택 공식화로 삼성·SK하이닉스가 6월부터 양산 공급에 진입, 메모리 슈퍼사이클 진입 기대.",
+  "category": "semicon",
+  "comment": "수요 폭증→투자·고용 확대→배후 부동산 수요로 파급."
+ },
+ {
+  "title": "서울 전셋값 6/22 주간 +0.35%…대규모 입주장에 전세매물 넉 달 만에 2만건대 회복",
+  "source": "파이낸셜뉴스",
+  "url": "https://www.fnnews.com/news/202606241831166859",
+  "date": "2026-06-24",
+  "summary": "6월 22일 기준 서울 전셋값 주간 +0.35%로 12년 8개월 만 최고. 입주장으로 전세매물이 넉 달 만에 2만건대 회복, 자치구별 편차 큼.",
+  "category": "price",
+  "comment": "전세가 상승세 속 입주장 효과로 단기 매물 회복."
+ },
+ {
+  "title": "남양주 왕숙2 A-3블록 공공분양 일반공급 평균 126.8대1",
+  "source": "아주경제",
+  "url": "https://www.ajunews.com/view/20260529205849620",
+  "date": "2026-06-18",
+  "summary": "왕숙2지구 첫 공공분양 A-3블록 163가구에 2만671명 접수, 평균 126.8대1. 전용 59㎡A형 433.3대1 최고.",
+  "category": "price",
+  "comment": "분상제 3기 신도시 공공분양에 실수요 집중."
+ },
+ {
+  "title": "남양주 왕숙 아테라(A-1) 일반공급 평균 105.5대1",
+  "source": "파이낸셜뉴스",
+  "url": "https://www.fnnews.com/news/202606181814543155",
+  "date": "2026-06-18",
+  "summary": "왕숙2 첫 본청약 '왕숙 아테라' 223가구에 2만3525명 신청, 평균 105.5대1·최고 393.6대1.",
+  "category": "price",
+  "comment": "분양가상한제 안전마진에 청약 쏠림."
+ },
+ {
+  "title": "고양 창릉 S-1 우미린 그레니티 일반공급 평균 61.2대1",
+  "source": "KB부동산",
+  "url": "https://v.daum.net/v/uy8seEd8JF",
+  "date": "2026-06-20",
+  "summary": "고양 창릉 S-1블록 우미린 그레니티 182가구에 1만1135명 신청, 평균 61.2대1.",
+  "category": "price",
+  "comment": "3기 신도시 민간참여 공공분양 흥행."
+ },
+ {
+  "title": "인천계양 A3 신혼희망타운 본청약 평균 3.14대1…분양가 상승에 사전청약比 급락",
+  "source": "인천투데이",
+  "url": "https://www.incheontoday.com/news/articleView.html?idxno=254164",
+  "date": "2026-06-20",
+  "summary": "3기 신도시 최초 본청약 인천계양 A3 229세대에 721명, 평균 3.14대1. 분양가 상승(최대 6500만원)으로 사전청약(12.83대1) 대비 4분의 1. 입주 2026년 12월 예정.",
+  "category": "price",
+  "comment": "분양가 상승이 3기 신도시 청약 매력을 떨어뜨림."
+ },
+ {
+  "title": "5월 전국 아파트 경매 낙찰률 34.3%…2년11개월 만 최저",
+  "source": "한국경제",
+  "url": "https://www.hankyung.com/article/2026060839501",
+  "date": "2026-05-31",
+  "summary": "지지옥션 2026년 5월 전국 아파트 경매 진행 3204건, 낙찰률 34.3%로 2023년 6월 이후 최저. 서울 과열·지방 유찰 양극화.",
+  "category": "price",
+  "comment": "낙찰가율은 높지만 낙찰률 급락 — 매수자 선별 심화."
+ },
+ {
+  "title": "6월 4주 서울 아파트 경매 주간 낙찰가율 101.2%·낙찰률 19.4%로 급락",
+  "source": "매일일보",
+  "url": "https://www.m-i.kr/news/articleView.html?idxno=1385906",
+  "date": "2026-06-22",
+  "summary": "6월 4주 서울 아파트 주간 낙찰가율 101.2%(전주 107.7%), 낙찰률 19.4%(전주 44.7%)로 급락. 경기 88.8%, 인천 79.9%.",
+  "category": "price",
+  "comment": "가격은 높게 써내되 응찰은 위축되는 신중 장세."
+ },
+ {
+  "title": "2026년 수도권 아파트 입주물량 8.15만세대…전년比 약 28% 감소",
+  "source": "프라임경제",
+  "url": "https://m.newsprime.co.kr/section_view.html?no=717197",
+  "date": "2026-06-20",
+  "summary": "2026년 수도권 입주물량 8만1534세대(전년 11만2184 대비 -28%). 서울 1만6412(-48%), 경기 5만6031(-8.3%), 인천 1만4315(-19.5%).",
+  "category": "price",
+  "comment": "공급절벽이 전세·매매 하방을 지지하는 구조적 요인."
+ },
+ {
+  "title": "하반기 전셋값 상승 전망 우세…1~4월 서울 착공 4564가구로 2011년 이후 최저",
+  "source": "파이낸셜뉴스",
+  "url": "https://www.fnnews.com/news/202606280600581929",
+  "date": "2026-06-28",
+  "summary": "2026년 하반기 전셋값 상승 전망 우세. 1~4월 서울 아파트 착공 4564가구로 동기 최저. 정부 매입임대 9만호·도생 규제완화 대책 추진.",
+  "category": "price",
+  "comment": "착공 최저→입주절벽→전세 상승 압력. 비아파트 대책 실효성이 관건."
+ },
+ {
+  "title": "2026년 서울 아파트 전월세 중 월세 비중 49.1%…신규는 54.3%",
+  "source": "다음뉴스",
+  "url": "https://v.daum.net/v/20251231213204705",
+  "date": "2026-06-10",
+  "summary": "1월~6월10일 서울 아파트 전월세 중 월세 비중 49.1%(전년 +5.7%p), 신규 거래 기준 54.3%로 과반.",
+  "category": "price",
+  "comment": "전세 매물 감소·보증금 부담으로 월세화 가속."
+ },
+ {
+  "title": "2026년 상반기 전월세전환율 6.4%…법정 상한 4.5% 상회",
+  "source": "한국주택금융공사",
+  "url": "https://www.hf.go.kr/ko/sub04/sub04_08.do",
+  "date": "2026-06-25",
+  "summary": "2026년 상반기 전월세전환율 6.4%로 임대차법 법정 상한(연 4.5%)을 상회. 실거래 전환율이 상한을 초과하는 구조.",
+  "category": "price",
+  "comment": "높은 전환율이 월세 부담을 키워 월세화 강화."
+ },
+ {
+  "title": "3기 신도시 인천계양 본청약 본격화…2026년 12월 첫 입주",
+  "source": "한국토지주택공사",
+  "url": "https://lh.or.kr/",
+  "date": "2026-06-20",
+  "summary": "LH가 3기 신도시 인천계양 A2(747세대) 본청약 개시. 인천계양은 3기 신도시 중 가장 빠른 2026년 12월 입주. 고양 창릉·남양주 왕숙2도 2026년 본청약.",
+  "category": "policy",
+  "comment": "3기 신도시 입주 시작되나 대규모 효과는 2028년 이후."
+ }
+]
