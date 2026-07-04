@@ -1,0 +1,568 @@
+[
+ {
+  "complex": "아크로리버파크",
+  "sido": "서울특별시",
+  "gu": "서초구",
+  "dong": "반포동",
+  "households": 1612,
+  "built_year": 2016,
+  "sizes_m2": [
+   59,
+   84,
+   112,
+   129
+  ],
+  "deal": [
+   {
+    "size_m2": 84.97,
+    "price_eok": 46.6,
+    "date": "2022-01",
+    "type": "매매"
+   }
+  ],
+  "dev": "신반포1차 재건축, 한강변 반포 대장 단지(대림산업)",
+  "source_urls": [
+   "https://kbland.kr/se/c/28770",
+   "https://realty.daum.net/home/apt/danjis/34306"
+  ]
+ },
+ {
+  "complex": "잠실엘스",
+  "sido": "서울특별시",
+  "gu": "송파구",
+  "dong": "잠실동",
+  "households": 5678,
+  "built_year": 2008,
+  "sizes_m2": [
+   59,
+   84,
+   119
+  ],
+  "dev": "잠실주공1단지 재건축, 잠실 리센츠·트리지움과 함께 잠실 대장 3인방",
+  "source_urls": [
+   "https://m.richgo.ai/realty/danji/a1XtWXM",
+   "https://www.kbland.kr/c/15617"
+  ]
+ },
+ {
+  "complex": "리센츠",
+  "sido": "서울특별시",
+  "gu": "송파구",
+  "dong": "잠실동",
+  "households": 5563,
+  "built_year": 2008,
+  "sizes_m2": [
+   27,
+   59,
+   84,
+   124
+  ],
+  "dev": "잠실주공2단지 재건축, 잠실역 초역세권 대단지",
+  "source_urls": [
+   "https://kbland.kr/se/c/15524",
+   "https://realty.daum.net/home/apt/danjis/34306"
+  ]
+ },
+ {
+  "complex": "트리지움",
+  "sido": "서울특별시",
+  "gu": "송파구",
+  "dong": "잠실동",
+  "households": 3696,
+  "built_year": 2007,
+  "sizes_m2": [
+   59,
+   84,
+   114
+  ],
+  "dev": "잠실주공3단지 재건축, 잠실 학군·상권 인접",
+  "source_urls": [
+   "https://realty.daum.net/home/apt/danjis/14453"
+  ]
+ },
+ {
+  "complex": "래미안대치팰리스",
+  "sido": "서울특별시",
+  "gu": "강남구",
+  "dong": "대치동",
+  "households": 1608,
+  "built_year": 2015,
+  "sizes_m2": [
+   59,
+   84,
+   94,
+   114
+  ],
+  "pyeong_price": 18509,
+  "deal": [
+   {
+    "size_m2": 94.48,
+    "price_eok": 53,
+    "date": "2025-12-08",
+    "type": "매매"
+   }
+  ],
+  "dev": "청실아파트 재건축, 대치동 학군 대장",
+  "source_urls": [
+   "https://kbland.kr/se/c/29017",
+   "https://realty.daum.net/home/apt/danjis/33293"
+  ]
+ },
+ {
+  "complex": "래미안첼리투스",
+  "sido": "서울특별시",
+  "gu": "용산구",
+  "dong": "이촌동",
+  "households": 460,
+  "built_year": 2015,
+  "sizes_m2": [
+   124
+  ],
+  "pyeong_price": 14368,
+  "jeonse_ratio": 37,
+  "deal": [
+   {
+    "size_m2": 124.01,
+    "price_eok": 54,
+    "date": "2025-07-22",
+    "type": "매매"
+   }
+  ],
+  "dev": "이촌 렉스아파트 재건축, 한강변 56층 초고층 단일 평형",
+  "source_urls": [
+   "https://kbland.kr/c/29442",
+   "https://m.richgo.ai/realty/danji/a2TyHkM"
+  ]
+ },
+ {
+  "complex": "마포래미안푸르지오",
+  "sido": "서울특별시",
+  "gu": "마포구",
+  "dong": "아현동",
+  "households": 3885,
+  "built_year": 2014,
+  "sizes_m2": [
+   59,
+   84,
+   114
+  ],
+  "deal": [
+   {
+    "size_m2": 84.59,
+    "price_eok": 25.7,
+    "date": "2025-10-19",
+    "type": "매매"
+   }
+  ],
+  "dev": "아현3구역 재개발, 마포 대장 대단지(마래푸)",
+  "source_urls": [
+   "https://kbland.kr/se/c/26415",
+   "https://m.richgo.ai/realty/danji/a4tGVUY"
+  ]
+ },
+ {
+  "complex": "트리마제",
+  "sido": "서울특별시",
+  "gu": "성동구",
+  "dong": "성수동1가",
+  "households": 688,
+  "built_year": 2017,
+  "sizes_m2": [
+   25,
+   49,
+   84,
+   140
+  ],
+  "pyeong_price": 20688,
+  "jeonse_ratio": 40,
+  "deal": [
+   {
+    "size_m2": 84.54,
+    "price_eok": 53,
+    "date": "2025-12-05",
+    "type": "매매"
+   }
+  ],
+  "dev": "성수 한강변 초고층 하이엔드, 서울숲 인접",
+  "source_urls": [
+   "https://kbland.kr/se/c/29237",
+   "https://m.richgo.ai/realty/danji/a8glaVw"
+  ]
+ },
+ {
+  "complex": "목동신시가지7단지",
+  "sido": "서울특별시",
+  "gu": "양천구",
+  "dong": "목동",
+  "households": 2550,
+  "built_year": 1986,
+  "sizes_m2": [
+   53,
+   66,
+   74,
+   101
+  ],
+  "deal": [
+   {
+    "size_m2": 74,
+    "price_eok": 28.2,
+    "date": "2026-03",
+    "type": "매매"
+   }
+  ],
+  "dev": "목동 재건축 대장, 5호선 목동역 초역세권(최고 49층 4,300가구 추진)",
+  "source_urls": [
+   "https://www.yangcheon.go.kr/site/yangcheon/05/10508110200002017010604.jsp",
+   "https://v.daum.net/v/8WdeSF4qdY"
+  ]
+ },
+ {
+  "complex": "래미안에스티움",
+  "sido": "서울특별시",
+  "gu": "영등포구",
+  "dong": "신길동",
+  "households": 1722,
+  "built_year": 2017,
+  "sizes_m2": [
+   59,
+   84,
+   114
+  ],
+  "dev": "신길뉴타운 7구역 재개발, 7호선 신풍역 인접",
+  "source_urls": [
+   "https://kbland.kr/se/c/30180",
+   "https://realty.daum.net/home/apt/danjis/36467"
+  ]
+ },
+ {
+  "complex": "과천푸르지오써밋",
+  "sido": "경기도",
+  "gu": "과천시",
+  "dong": "중앙동",
+  "households": 1571,
+  "built_year": 2020,
+  "sizes_m2": [
+   59,
+   84,
+   109,
+   120,
+   131
+  ],
+  "dev": "과천주공7-1단지 재건축, 과천 신축 대장",
+  "source_urls": [
+   "https://kbland.kr/se/c/46375",
+   "https://m.richgo.ai/realty/danji/a0HUuxE"
+  ]
+ },
+ {
+  "complex": "분당 파크뷰",
+  "sido": "경기도",
+  "gu": "성남시 분당구",
+  "dong": "정자동",
+  "households": 1829,
+  "built_year": 2004,
+  "sizes_m2": [
+   49,
+   84,
+   140,
+   164
+  ],
+  "dev": "정자동 주상복합 대장, 탄천·중앙공원 인접",
+  "source_urls": [
+   "https://kbland.kr/se/c/12634",
+   "https://realty.daum.net/home/apt/danjis/6114"
+  ]
+ },
+ {
+  "complex": "철산래미안자이",
+  "sido": "경기도",
+  "gu": "광명시",
+  "dong": "철산동",
+  "households": 2072,
+  "built_year": 2009,
+  "sizes_m2": [
+   59,
+   84,
+   114
+  ],
+  "pyeong_price": 4968,
+  "deal": [
+   {
+    "size_m2": 84.34,
+    "price_eok": 12.7,
+    "date": "2025-12-11",
+    "type": "매매"
+   }
+  ],
+  "dev": "철산주공 재건축, 7호선 철산역 인접",
+  "source_urls": [
+   "https://kbland.kr/se/c/15930",
+   "https://realty.daum.net/home/apt/danjis/18025"
+  ]
+ },
+ {
+  "complex": "미사강변센트럴자이",
+  "sido": "경기도",
+  "gu": "하남시",
+  "dong": "풍산동",
+  "households": 1222,
+  "built_year": 2017,
+  "sizes_m2": [
+   84,
+   101
+  ],
+  "deal": [
+   {
+    "size_m2": 101,
+    "price_eok": 13.7,
+    "type": "매매"
+   }
+  ],
+  "dev": "미사강변도시 자족단지, 5호선 미사역 인접",
+  "source_urls": [
+   "https://kbland.kr/se/c/29962",
+   "https://m.richgo.ai/realty/danji/a3obzwl"
+  ]
+ },
+ {
+  "complex": "동탄역시범우남퍼스트빌",
+  "sido": "경기도",
+  "gu": "화성시",
+  "dong": "청계동",
+  "households": 1442,
+  "built_year": 2015,
+  "sizes_m2": [
+   70,
+   84,
+   97
+  ],
+  "deal": [
+   {
+    "size_m2": 84.98,
+    "price_eok": 13.6,
+    "date": "2025-12-30",
+    "type": "매매"
+   }
+  ],
+  "dev": "동탄2신도시 SRT/GTX 동탄역 역세권 시범단지",
+  "source_urls": [
+   "https://kbland.kr/se/c/26863",
+   "https://m.richgo.ai/realty/danji/a5OgIHW"
+  ]
+ },
+ {
+  "complex": "송도더샵퍼스트파크(F15블록)",
+  "sido": "인천광역시",
+  "gu": "연수구",
+  "dong": "송도동",
+  "households": 872,
+  "built_year": 2017,
+  "sizes_m2": [
+   59,
+   84,
+   102
+  ],
+  "pyeong_price": 4435,
+  "deal": [
+   {
+    "size_m2": 59.88,
+    "price_eok": 8.05,
+    "date": "2025-10-10",
+    "type": "매매"
+   }
+  ],
+  "dev": "송도국제도시 센트럴파크 인근, 국제업무지구 접근",
+  "source_urls": [
+   "https://kbland.kr/se/c/29996",
+   "https://realty.daum.net/home/apt/danjis/37030"
+  ]
+ },
+ {
+  "complex": "헬리오시티",
+  "sido": "서울특별시",
+  "gu": "송파구",
+  "dong": "가락동",
+  "households": 9510,
+  "built_year": 2018,
+  "sizes_m2": [
+   59,
+   84,
+   99,
+   110
+  ],
+  "pyeong_price": 9274,
+  "deal": [
+   {
+    "size_m2": 99.59,
+    "price_eok": 32.5,
+    "date": "2025-12-26",
+    "type": "매매"
+   }
+  ],
+  "dev": "가락시영 재건축, 국내 최대 규모 단지(9,510세대)",
+  "source_urls": [
+   "https://kbland.kr/se/c/32148",
+   "https://ko.wikipedia.org/wiki/%EC%86%A1%ED%8C%8C_%ED%97%AC%EB%A6%AC%EC%98%A4%EC%8B%9C%ED%8B%B0"
+  ]
+ },
+ {
+  "complex": "래미안퍼스티지",
+  "sido": "서울특별시",
+  "gu": "서초구",
+  "dong": "반포동",
+  "households": 2444,
+  "built_year": 2009,
+  "sizes_m2": [
+   84,
+   116,
+   168,
+   222
+  ],
+  "deal": [
+   {
+    "size_m2": 84.93,
+    "price_eok": 51.5,
+    "date": "2026-03-20",
+    "type": "매매"
+   }
+  ],
+  "dev": "반포주공2단지 재건축, 반포 전통 대장",
+  "source_urls": [
+   "https://kbland.kr/se/c/21363",
+   "https://m.richgo.ai/realty/danji/a1GKgZM"
+  ]
+ },
+ {
+  "complex": "디에이치아너힐즈",
+  "sido": "서울특별시",
+  "gu": "강남구",
+  "dong": "개포동",
+  "households": 1320,
+  "built_year": 2019,
+  "sizes_m2": [
+   59,
+   84,
+   113
+  ],
+  "jeonse_ratio": 36,
+  "deal": [
+   {
+    "size_m2": 84.35,
+    "price_eok": 39,
+    "date": "2025-12-16",
+    "type": "매매"
+   }
+  ],
+  "dev": "개포주공3단지 재건축, 수인분당선 개포동역 인접",
+  "source_urls": [
+   "https://kbland.kr/se/c/33681",
+   "https://www.zigbang.com/home/apt/danjis/37838"
+  ]
+ },
+ {
+  "complex": "검단신도시 우미린더시그니처",
+  "sido": "인천광역시",
+  "gu": "서구",
+  "dong": "원당동",
+  "households": 1268,
+  "built_year": 2022,
+  "sizes_m2": [
+   84,
+   99
+  ],
+  "dev": "검단신도시 신축 대장급, 인천1호선 연장·GTX 호재",
+  "source_urls": [
+   "https://www.incheon.go.kr/build/BU040219",
+   "https://land.ih.co.kr/open_content/sub/geomdan/business.jsp"
+  ]
+ },
+ {
+  "complex": "e편한세상옥수파크힐스",
+  "sido": "서울특별시",
+  "gu": "성동구",
+  "dong": "옥수동",
+  "households": 1976,
+  "built_year": 2016,
+  "sizes_m2": [
+   59,
+   84,
+   115
+  ],
+  "dev": "옥수13구역 재개발, 3호선 옥수역·한강 조망",
+  "source_urls": [
+   "https://kbland.kr/se/c/31563",
+   "https://www.zigbang.com/home/apt/danjis/36223"
+  ]
+ },
+ {
+  "complex": "판교푸르지오그랑블",
+  "sido": "경기도",
+  "gu": "성남시 분당구",
+  "dong": "백현동",
+  "households": 948,
+  "built_year": 2011,
+  "sizes_m2": [
+   117,
+   120,
+   125,
+   139
+  ],
+  "dev": "판교신도시 백현동 주상복합 대장, 판교테크노밸리 인접",
+  "source_urls": [
+   "https://kbland.kr/se/c/22053",
+   "https://m.richgo.ai/realty/danji/a1cUTOF"
+  ]
+ },
+ {
+  "complex": "고덕국제신도시파라곤",
+  "sido": "경기도",
+  "gu": "평택시",
+  "dong": "고덕동",
+  "households": 752,
+  "built_year": 2019,
+  "sizes_m2": [
+   70,
+   85
+  ],
+  "deal": [
+   {
+    "size_m2": 85,
+    "price_eok": 9.8,
+    "date": "2021-09",
+    "type": "매매"
+   }
+  ],
+  "dev": "고덕국제신도시 1단계, 삼성전자 평택캠퍼스 배후",
+  "source_urls": [
+   "https://www.zigbang.com/home/apt/danjis/38170",
+   "https://www.aptrank.com/apt_detail.php?aptnameuid=47937"
+  ]
+ },
+ {
+  "complex": "여의도 시범",
+  "sido": "서울특별시",
+  "gu": "영등포구",
+  "dong": "여의도동",
+  "households": 1584,
+  "built_year": 1971,
+  "sizes_m2": [
+   60,
+   79,
+   118,
+   156
+  ],
+  "deal": [
+   {
+    "size_m2": 118,
+    "price_eok": 41,
+    "date": "2026-04",
+    "type": "매매"
+   }
+  ],
+  "dev": "여의도 최대어 재건축(사업시행인가), 최고 65층 2,493가구 예정",
+  "source_urls": [
+   "https://kbland.kr/se/c/2171",
+   "https://www.inews24.com/view/1960227"
+  ]
+ }
+]
