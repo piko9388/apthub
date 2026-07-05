@@ -61,17 +61,25 @@ TRUST = {
 
 
 def confidence_of(url: str, given: str = "") -> str:
-    if given:
-        for k in ("공식", "언론", "추정"):
-            if k in given:
-                return k
+    """신뢰도 등급. '공식'은 정부·기관 1차 출처 도메인일 때만 인정 —
+    언론이 인용한 공식 통계는 2차 인용이므로 '언론'으로 강등(배지 신뢰도 정직화)."""
     host = ""
     if url:
         from urllib.parse import urlparse
         host = (urlparse(url).hostname or "").lower()
-    for tier, domains in TRUST.items():
-        if any(d in host for d in domains):
-            return tier
+    is_official = any(d in host for d in TRUST["공식"])
+    is_press = any(d in host for d in TRUST["언론"])
+    if given:
+        g = next((k for k in ("공식", "언론", "추정") if k in given), "")
+        if g == "공식":
+            # 공식 주장은 1차 출처(정부·기관) 도메인일 때만 인정. 아니면 언론 인용으로 강등.
+            return "공식" if is_official else "언론"
+        if g:
+            return g
+    if is_official:
+        return "공식"
+    if is_press:
+        return "언론"
     return "추정"
 
 
@@ -319,19 +327,27 @@ def _neg_date(d):
     return tuple(-int(x) for x in (d or "0000-00-00").replace("-", " ").split())
 
 
-def _latest_metric(dat, metric, sido):
-    """metric+sido 시계열의 최신값과 직전값을 (cur, prev)로 반환."""
-    xs = sorted([s for s in dat if getattr(s, "metric", None) == metric
-                 and (s.sido or "전국") == sido and getattr(s, "value", None) is not None],
-                key=lambda s: s.date or "")
+def _latest_metric(dat, metric, sido, official_only=False):
+    """metric+sido 시계열의 최신값과 직전값을 (cur, prev)로 반환.
+    official_only=True 면 신뢰도 '공식'(1차 출처) 값만 대상."""
+    xs = [s for s in dat if getattr(s, "metric", None) == metric
+          and (s.sido or "전국") == sido and getattr(s, "value", None) is not None]
+    if official_only:
+        xs = [s for s in xs if confidence_of(s.url, s.confidence) == "공식"]
+    xs.sort(key=lambda s: s.date or "")
     if not xs:
         return None, None
     return xs[-1], (xs[-2] if len(xs) > 1 else None)
 
 
+_CONFMARK = {"공식": "●", "언론": "◐", "추정": "○"}
+
+
 def _kpi(dat, metric, sido, label, suffix):
-    """KPI 카드 1개 — 최신값 + 방향 화살표·색."""
-    cur, prev = _latest_metric(dat, metric, sido)
+    """KPI 카드 1개 — 최신값 + 방향 화살표·색. 공식(1차 출처) 값 우선."""
+    cur, prev = _latest_metric(dat, metric, sido, official_only=True)
+    if not cur:  # 공식 값이 없으면 최신값 사용하되 신뢰도 배지로 명시
+        cur, prev = _latest_metric(dat, metric, sido)
     if not cur:
         return ""
     v = cur.value
@@ -341,7 +357,9 @@ def _kpi(dat, metric, sido, label, suffix):
     else:
         cls, arr = ("up", "▲") if v > 0.02 else ("down", "▼") if v < -0.02 else ("flat", "→")
     sign = "+" if (v > 0 and "/주" in suffix) else ""  # 변동률만 부호 표기(금리 등 수준값 제외)
-    return (f'<div class="kpi"><div class="kpi-k">{html.escape(label)}</div>'
+    cf = confidence_of(cur.url, cur.confidence)
+    cfmark = f'<span class="kpi-cf {cf}" title="출처 신뢰도: {cf} · {html.escape(cur.date or "")}">{_CONFMARK[cf]}</span>'
+    return (f'<div class="kpi"><div class="kpi-k">{html.escape(label)} {cfmark}</div>'
             f'<div class="kpi-v {cls}">{arr} {sign}{round(v,2)}{suffix}</div></div>')
 
 
@@ -421,16 +439,72 @@ def load_complex():
     return out
 
 
+SIDO_ALIAS = {"인천광역시": "인천", "인천시": "인천", "서울특별시": "서울", "서울시": "서울",
+              "경기도": "경기", "수도권 전체": "수도권"}
+_INDEX_RATE = {"매매가격지수 변동률", "전세가격지수 변동률"}
+
+
+def _demote_to_news(s, note=""):
+    """지표 트랙에서 뉴스 트랙으로 강등(시계열 오염 방지). 정보는 뉴스로 보존."""
+    s.kind = "news"
+    for attr in ("metric", "value", "unit", "area_band", "price_band"):
+        if hasattr(s, attr):
+            setattr(s, attr, None)
+
+
+def normalize_signals(sigs):
+    """지표 정합성 정규화(리뷰 P0/P1 반영):
+    - sido 별칭 통일(인천광역시→인천 등) — 지역 카운트·필터·지도 정상화
+    - 매매/전세 가격지수 변동률: 부동산원 아파트 단일 기준만 지표로 — 주택종합·KB는 뉴스 강등
+    - 입주물량: 연간(연말) 스냅샷만 지표로 — 상반기/하반기/누적/월간은 뉴스 강등
+    - 분양가 단위 이상치(평당 7,000만원 초과=천원/㎡ 혼입) 뉴스 강등
+    - 미분양·준공후 미분양 단위 '가구'→'호' 통일
+    - 매수우위지수: 0~200 범위 밖 오기재 제거
+    """
+    for s in sigs:
+        if s.sido in SIDO_ALIAS:
+            s.sido = SIDO_ALIAS[s.sido]
+        if getattr(s, "kind", "news") != "data":
+            continue
+        m = getattr(s, "metric", None)
+        txt = (s.title or "") + (s.summary or "") + (s.source or "")
+        # 지수 변동률 기준 통일: 주택종합·KB는 아파트 단일축에서 분리(뉴스로)
+        if m in _INDEX_RATE:
+            if "주택종합" in txt or "종합주택" in txt or "KB" in txt.upper():
+                _demote_to_news(s)
+                continue
+        # 입주물량: 연간 스냅샷만 유지
+        if m == "입주물량":
+            if any(k in txt for k in ("상반기", "하반기", "1~4월", "누적", "H1", "H2", "월 ")):
+                _demote_to_news(s)
+                continue
+        # 분양가 평당(만원) 단위 이상치 제거
+        if m == "분양가" and isinstance(getattr(s, "value", None), (int, float)) and s.value > 7000:
+            _demote_to_news(s)
+            continue
+        # 미분양 단위 통일
+        if m in ("미분양", "준공후 미분양") and getattr(s, "unit", None) in ("가구", "세대"):
+            s.unit = "호"
+        # 매수우위지수 범위 검증(0~200)
+        if m == "매수우위지수" and isinstance(getattr(s, "value", None), (int, float)) \
+                and not (0 <= s.value <= 200):
+            _demote_to_news(s)
+            continue
+    return sigs
+
+
 def build():
-    sigs = load_all()
+    sigs = normalize_signals(load_all())
     # 두 트랙 분리: news(기사·정성) vs data(공식 지표·정량)
     news = [s for s in sigs if getattr(s, "kind", "news") != "data"]
     dat = [s for s in sigs if getattr(s, "kind", "news") == "data"]
     reds = sum(1 for s in news if s.trigger == "red")
     yellows = sum(1 for s in news if s.trigger == "yellow")
+    _dates = sorted(s.date for s in sigs if s.date and s.date <= datetime.now().strftime("%Y-%m-%d"))
     data = {
         "updated": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "today": datetime.now().strftime("%Y-%m-%d"),
+        "latest": (_dates[-1] if _dates else ""),
         "total": len(news), "reds": reds, "yellows": yellows,
         "data_count": len(dat), "public": PUBLIC_ONLY,
         "sig": [client_signal(s) for s in news],
@@ -651,8 +725,15 @@ TEMPLATE = r"""<!DOCTYPE html>
   .sp-dot{fill:var(--accent);opacity:.45}
   .sp-last{fill:var(--navy)}
   .sp-zero{stroke:var(--border);stroke-width:1;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
-  .sp-line.up{stroke:var(--up)}.sp-line.down{stroke:var(--down)}
-  .sp-last.up{fill:var(--up)}.sp-last.down{fill:var(--down)}
+  .sp-line.up{stroke:var(--up)}.sp-line.down{stroke:var(--down)}.sp-line.flat{stroke:var(--muted)}
+  .sp-end{stroke-width:2.4;vector-effect:non-scaling-stroke;stroke:var(--navy)}
+  .sp-end.up{stroke:var(--up)}.sp-end.down{stroke:var(--down)}.sp-end.flat{stroke:var(--muted)}
+  .mt-cf{font-size:10px;font-weight:700;margin-right:3px;white-space:nowrap}
+  .mt-cf.공식{color:#2e7d52}.mt-cf.언론{color:#9a6b3a}.mt-cf.추정{color:var(--muted)}
+  .clegend{font-size:11px;color:var(--muted);line-height:1.6;margin:2px 2px 12px}
+  .clegend .mt-cf{font-size:10.5px}
+  .kpi-cf{font-size:10px;vertical-align:1px}
+  .kpi-cf.공식{color:#2e7d52}.kpi-cf.언론{color:#9a6b3a}.kpi-cf.추정{color:var(--muted)}
   .dlt{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
   .dlt.up{color:var(--up)}.dlt.down{color:var(--down)}.dlt.flat{color:var(--muted)}
   /* 동향 헤드라인 배너 */
@@ -845,12 +926,12 @@ function buildSidebar(){
   var c=counts(), gus={};
   REG.forEach(function(r){ (gus[r.sido]=gus[r.sido]||[]).push(r.gu); });
   Object.keys(gus).forEach(function(k){gus[k].sort();});
-  var upd=(DATA.updated||"").slice(0,10);
+  var latest=DATA.latest||((DATA.updated||"").slice(0,10)), built=(DATA.updated||"").slice(0,10);
   var h='<div class="sidesum"><div class="ss-t">수도권 부동산 동향</div>'
     +'<div class="ss-b"><span class="ss-n">'+DATA.total+'<i>건</i></span>'
     +'<span class="ss-r">🔴 긴급 '+DATA.reds+'</span>'
     +(DATA.data_count?'<span class="ss-d">📊 지표 '+DATA.data_count+'</span>':'')+'</div>'
-    +'<div class="ss-u">업데이트 '+upd+'</div></div>';
+    +'<div class="ss-u" title="빌드 '+built+'">데이터 기준일 '+latest+'</div></div>';
   h+='<div class="navsec"><div class="navttl">보기</div>';
   h+=navrow("📋 종합 동향","__view_report",S.view==="report");
   h+=navrow("📊 동향 모니터링","__view_monitor",S.view==="monitor");
@@ -1030,25 +1111,28 @@ function ymLabel(d){if(!d)return "";var p=d.split("-");return p[0].slice(2)+"."+
 function fmtV(m){if(!m||m.value==null)return "—";var v=Math.round(m.value*100)/100;return (v>0&&m.unit==="%"?"+":"")+v+(m.unit||"");}
 function series(metric,sido){return MET.filter(function(m){return m.metric===metric&&(!sido||m.sido===sido);})
   .sort(function(x,y){return (x.date||"").localeCompare(y.date||"");});}
+function dnum(d){var p=(d||"").split("-");return (+p[0]||0)*372+((+p[1]||1)-1)*31+((+p[2]||1)-1);}
 function sparkline(a){
-  // 정량 지표 시계열 → 인라인 SVG (탑티어 리서치 스타일 추이선)
-  var vals=a.map(function(m){return m.value;}).filter(function(v){return v!=null;});
-  if(vals.length<2) return "";
-  var w=190,h=40,pad=5,n=vals.length;
+  // 정량 지표 시계열 → 인라인 SVG. X축을 '날짜'로 배치(등간격 아님) → 결측·간격이 실제로 보임.
+  var A=a.filter(function(m){return m.value!=null;});
+  if(A.length<2) return "";
+  var vals=A.map(function(m){return m.value;}), n=A.length;
+  var w=190,h=40,pad=5;
   var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals), rng=(mx-mn)||1;
-  var X=function(i){return pad+i*(w-2*pad)/(n-1);};
+  var t=A.map(function(m){return dnum(m.date);});
+  var t0=t[0], tr=(t[n-1]-t0)||1;
+  var X=function(i){return pad+(t[i]-t0)/tr*(w-2*pad);};
   var Y=function(v){return h-pad-(v-mn)/rng*(h-2*pad);};
   var pts=vals.map(function(v,i){return X(i).toFixed(1)+","+Y(v).toFixed(1);}).join(" ");
-  var dots=vals.map(function(v,i){
-    var last=i===n-1;
-    return '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="'+(last?3:1.8)+'" class="'+(last?"sp-last":"sp-dot")+'"><title>'+ymLabel(a[i].date)+" "+fmtV(a[i])+'</title></circle>';
-  }).join("");
   var zero="";
   if(mn<0&&mx>0){ var zy=Y(0).toFixed(1); zero='<line x1="'+pad+'" y1="'+zy+'" x2="'+(w-pad)+'" y2="'+zy+'" class="sp-zero"/>'; }
-  var d=vals[n-1]-vals[0]; var dir=d>0?"up":d<0?"down":"";
-  return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" aria-hidden="true">'
-    +zero+'<polyline class="sp-line '+dir+'" points="'+pts+'"/>'
-    +dots.replace("sp-last","sp-last "+dir)+'</svg>';
+  var d=vals[n-1]-vals[0]; var dir=d>0?"up":d<0?"down":"flat";
+  // 끝점 마커는 세로 틱(preserveAspectRatio=none 하에서 원은 타원으로 왜곡되므로)
+  var lx=X(n-1).toFixed(1), lyv=Y(vals[n-1]);
+  var end='<line x1="'+lx+'" y1="'+(lyv-3).toFixed(1)+'" x2="'+lx+'" y2="'+(lyv+3).toFixed(1)+'" class="sp-end '+dir+'"/>';
+  var lab=ymLabel(A[0].date)+"→"+ymLabel(A[n-1].date)+" ("+n+"점)";
+  return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" role="img" aria-label="'+esc(lab)+'">'
+    +'<title>'+esc(lab)+'</title>'+zero+'<polyline class="sp-line '+dir+'" points="'+pts+'"/>'+end+'</svg>';
 }
 // 두 지표값의 변화량 칩(▲/▼ + 절대 증감) — 방향을 한눈에
 function deltaChip(cur,prev){
@@ -1059,6 +1143,8 @@ function deltaChip(cur,prev){
   var n=Math.abs(d).toLocaleString();
   return '<span class="dlt '+cls+'" title="직전값 대비">'+arr+(d!==0?n+u:"")+'</span>';
 }
+var CONFMARK={"공식":"●","언론":"◐","추정":"○"};
+function confBadge(cf){cf=cf||"추정";return '<span class="mt-cf '+cf+'" title="출처 신뢰도: '+cf+'">'+CONFMARK[cf]+cf+'</span>';}
 function metricTile(metric,sido){
   var a=series(metric,sido); if(!a.length)return "";
   var cur=a[a.length-1], prev=a.length>1?a[a.length-2]:null;
@@ -1068,7 +1154,7 @@ function metricTile(metric,sido){
     +'<span style="display:inline-flex;align-items:baseline;gap:6px">'+deltaChip(cur,prev)
     +'<a class="mt-v" href="'+esc(cur.url||"#")+'" target="_blank" rel="noopener" title="'+esc(cur.source||"")+'">'+fmtV(cur)+'</a></span></div>'
     +(spk||'')
-    +'<div class="mt-d">최신 '+esc(cur.date||"")+' · '+esc(cur.source||"")+' '+rangeLbl+'</div></div>';
+    +'<div class="mt-d">'+confBadge(cur.conf)+' 최신 '+esc(cur.date||"")+' · '+esc(cur.source||"")+' '+rangeLbl+'</div></div>';
 }
 function newsLean(sido){
   var ns=SIG.filter(function(s){return s.sido===sido;});
@@ -1107,7 +1193,9 @@ function renderMonitor(){
   var macro=["기준금리","COFIX","주택담보대출 금리","가계대출 증감","스트레스DSR 가산금리"];
   var price=["매매가격지수 변동률","전세가격지수 변동률","주간 매매변동률","주간 전세변동률","KB 매매변동률","5분위 평균매매가","5분위 배율","평당가","평형별 실거래가","전세가율","분양가","청약경쟁률","경매 낙찰가율","PIR","아파트 매매 거래량","주택 매매 거래량","미분양","준공후 미분양","입주물량","매수우위지수","매매전망지수"];
   var geos=["전국","수도권","서울","경기","인천"];
-  var h='<div class="lead">동향 모니터링 — <b>공식 지표</b>(정량)와 <b>뉴스</b>(정성)를 정합해 실제 추세 점검 · 지표 '+MET.length+'건</div>';
+  var gc={공식:0,언론:0,추정:0}; MET.forEach(function(m){gc[m.conf||"추정"]=(gc[m.conf||"추정"]||0)+1;});
+  var h='<div class="lead">동향 모니터링 — 정량 <b>지표</b>와 정성 <b>뉴스</b>를 정합해 추세 점검 · 지표 '+MET.length+'건</div>'
+    +'<p class="clegend">각 타일은 값 출처 신뢰도를 표기 — <span class="mt-cf 공식">●공식</span> 정부·기관 1차('+gc.공식+') · <span class="mt-cf 언론">◐언론</span> 보도 인용('+gc.언론+') · <span class="mt-cf 추정">○추정</span> 환산·해석('+gc.추정+'). 스파크라인 X축은 실제 날짜(간격=결측).</p>';
   // 거시
   var mt=macro.map(function(m){return metricTile(m,"전국");}).filter(Boolean).join("");
   if(mt) h+='<section class="msec"><h3>금리·거시</h3><div class="mgrid">'+mt+'</div></section>';
