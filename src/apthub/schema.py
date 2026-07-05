@@ -43,6 +43,12 @@ def normalize_date(value: str | None) -> Optional[str]:
     m = re.match(r"(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일", s)  # 2026년 6월 19일
     if m:
         return _ok(*m.groups())
+    # RFC822 (RSS pubDate): "Wed, 19 Jun 2026 09:30:00 +0900"
+    _MON = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+            "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12}
+    m = re.search(r"(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})", s)
+    if m and m.group(2).lower() in _MON:
+        return _ok(m.group(3), _MON[m.group(2).lower()], m.group(1))
     return None
 
 

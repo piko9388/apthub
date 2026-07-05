@@ -941,6 +941,7 @@ var S = {view:"report", sido:null, gu:null, cat:"", trig:null, q:"", sort:"date_
 var CAT={policy:"정책·세제",price:"시세·실거래",macro:"금리·거시",semicon:"반도체"};
 var CONF={"공식":"● 공식","언론":"◐ 언론","추정":"○ 추정"};
 function esc(s){return (s||"").replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function safeUrl(u){u=(u||"").trim();return /^https?:\/\//i.test(u)?esc(u):"#";}  // http(s)만 허용(javascript: 등 차단)
 function priceBand(m){return m==null?"#9aa3ad":m<8?"#2e8b57":m<12?"#2f5d8a":m<20?"#c8860b":"#c0504d";}
 
 
@@ -994,7 +995,7 @@ function buildSidebar(){
     +'<li><b>🔴 즉시 영향</b> — 대출·세제·규제지역 등 <b>제도 변경</b>·<b>기준금리 변경</b>·주요 단지 <b>신고가</b>. 영향 기간 <b>즉시~6개월</b>, 발견 즉시 확인.</li>'
     +'<li><b>🟡 추세 관찰</b> — 코픽스·주담대 금리, 공급·입주·분양, 정비사업 진전. 영향 기간 <b>6~24개월</b>, 주간 단위 점검.</li>'
     +'<li><b>⚪ 참고</b> — 그 외 배경·심리 신호.</li>'
-    +'<li><b>출처 신뢰도</b> — ● 공식(정부·기관·실거래) · ◐ 언론(보도) · ○ 추정(자체 해석) 순. 헤드라인 KPI는 공식만 사용.</li>'
+    +'<li><b>출처 신뢰도</b> — ● 공식(정부·기관 1차 출처) · ◐ 언론(보도 인용) · ○ 추정(환산·해석). 지표 타일·KPI에 등급 표기, 헤드라인 KPI는 공식값 우선. 산출·정규화 기준은 <b>docs/METHODOLOGY.md</b> 공개.</li>'
     +'<li><b>예정</b> 배지 — 발표·시행 예정(현재 미래 일자) 신호.</li>'
     +'<li><b>참고용</b> — 매수·매도 판단 보조 자료, 투자 권유 아님.</li>'
     +'</ul></details>'
@@ -1055,7 +1056,7 @@ function cardHTML(s){
   var bd=s.trig==="red"?'<span class="bd red">🔴</span>':s.trig==="yellow"?'<span class="bd yellow">🟡</span>':"";
   var pr=s.price!=null?'<span class="pr">매매 '+s.price+'억</span>':"";
   var cmt=s.comment?'<p class="cmt"><b>해석</b> '+esc(s.comment)+'</p>':"";
-  var src=s.url?'<a class="src" href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(s.source)+' ↗</a>':'<span class="src">'+esc(s.source)+'</span>';
+  var src=s.url?'<a class="src" href="'+safeUrl(s.url)+'" target="_blank" rel="noopener">'+esc(s.source)+' ↗</a>':'<span class="src">'+esc(s.source)+'</span>';
   return '<article class="card"><div class="meta"><span class="date">'+esc(s.date)+'</span>'+futBadge(s.date)
     +'<span class="loc" data-sido="'+esc(s.sido)+'" data-gu="'+esc(s.gu)+'">'+esc(loc)+'</span>'
     +'<span class="conf '+s.conf+'">'+CONF[s.conf]+'</span>'+pr+bd+'</div>'
@@ -1181,9 +1182,9 @@ function metricTile(metric,sido){
   var rangeLbl=a.length>1?('<span class="mt-rg">'+ymLabel(a[0].date)+'→'+ymLabel(cur.date)+'</span>'):'';
   return '<div class="mtile"><div class="mt-h"><span class="mt-n">'+esc(metric)+'</span>'
     +'<span style="display:inline-flex;align-items:baseline;gap:6px">'+deltaChip(cur,prev)
-    +'<a class="mt-v" href="'+esc(cur.url||"#")+'" target="_blank" rel="noopener" title="'+esc(cur.source||"")+'">'+fmtV(cur)+'</a></span></div>'
+    +'<a class="mt-v" href="'+safeUrl(cur.url)+'" target="_blank" rel="noopener" title="'+esc(cur.source||"")+'">'+fmtV(cur)+'</a></span></div>'
     +(spk||'')
-    +'<div class="mt-d">'+confBadge(cur.conf)+' 최신 '+esc(cur.date||"")+' · '+esc(cur.source||"")+' '+rangeLbl+'</div></div>';
+    +'<div class="mt-d">'+confBadge(cur.conf)+' '+(futBadge(cur.date)||'최신')+' '+esc(cur.date||"")+' · '+esc(cur.source||"")+' '+rangeLbl+'</div></div>';
 }
 function newsLean(sido){
   var ns=SIG.filter(function(s){return s.sido===sido;});
@@ -1344,7 +1345,7 @@ function derivedCard(o){
   var prices=sales.map(function(t){return t.price;});
   var rng=prices.length?(prices.length>1?Math.min.apply(null,prices)+"~"+Math.max.apply(null,prices)+"억":prices[0]+"억"):"—";
   var rows=sales.slice(0,4).map(function(t){
-    return '<li>'+(t.url?'<a href="'+esc(t.url)+'" target="_blank" rel="noopener">':'')
+    return '<li>'+(t.url?'<a href="'+safeUrl(t.url)+'" target="_blank" rel="noopener">':'')
       +'<span class="ad">'+esc(t.date||"")+'</span> 전용 '+t.area+'㎡ <b>'+t.price+'억</b>'
       +(t.url?'</a>':'')+'</li>';
   }).join("");
@@ -1365,7 +1366,7 @@ function regCard(c){
   var deals=(c.deal||[]).slice().sort(function(x,y){return (y.date||"").localeCompare(x.date||"");});
   var url=(c.source_urls||[])[0]||"";
   var rows=deals.slice(0,5).map(function(d){
-    return '<li>'+(url?'<a href="'+esc(url)+'" target="_blank" rel="noopener">':'')
+    return '<li>'+(url?'<a href="'+safeUrl(url)+'" target="_blank" rel="noopener">':'')
       +'<span class="ad">'+esc(d.date||"")+'</span> 전용 '+d.size_m2+'㎡ <b>'+d.price_eok+'억</b> '+esc(d.type||"")
       +(url?'</a>':'')+'</li>';
   }).join("");
@@ -1408,7 +1409,7 @@ function isoWeek(ds){var d=new Date(ds+"T00:00:00");var t=new Date(d);t.setDate(
 function sigLine(s){
   return '<li><span class="wb">'+(s.trig==="red"?"🔴":s.trig==="yellow"?"🟡":"·")+'</span>'
     +'<span class="d">'+esc(s.date)+'</span> '+futBadge(s.date)
-    +(s.url?'<a class="tl" href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(s.title)+'</a>':esc(s.title))
+    +(s.url?'<a class="tl" href="'+safeUrl(s.url)+'" target="_blank" rel="noopener">'+esc(s.title)+'</a>':esc(s.title))
     +(s.gu?' <span class="loc2">'+esc(s.sido+" "+s.gu)+'</span>':'')+'</li>';
 }
 var WD=["일","월","화","수","목","금","토"];
@@ -1432,7 +1433,7 @@ function weekSummary(arr){
 function sigLineND(s){   // 날짜 생략(일자 헤더에 표시) · 카테고리 태그 부착
   return '<li><span class="wtag '+esc(s.cat||"")+'">'+esc(CAT[s.cat]||s.cat||"-")+'</span>'
     +'<span class="wb">'+(s.trig==="red"?"🔴":s.trig==="yellow"?"🟡":"·")+'</span>'+futBadge(s.date)
-    +(s.url?'<a class="tl" href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(s.title)+'</a>':esc(s.title))
+    +(s.url?'<a class="tl" href="'+safeUrl(s.url)+'" target="_blank" rel="noopener">'+esc(s.title)+'</a>':esc(s.title))
     +(s.gu?' <span class="loc2">'+esc(s.sido+" "+s.gu)+'</span>':'')+'</li>';
 }
 function renderWeekly(){
