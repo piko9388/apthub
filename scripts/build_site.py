@@ -557,23 +557,48 @@ TEMPLATE = r"""<!DOCTYPE html>
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
   :root{
+    color-scheme:light dark;
     --bg:#eef0f4;--surface:#fff;--navy:#1e2d44;--navy2:#33445f;--accent:#2f5d8a;
     --muted:#5f6873;--border:#e2e5ea;--red:#b8403d;--redbg:#f7ebeb;--amber:#876419;
     --amberbg:#f7f1e0;--radius:12px;--shadow:0 1px 3px rgba(20,30,50,.06),0 4px 16px rgba(20,30,50,.04);
-    --side:240px;--up:#b8403d;--down:#2e7d52;
+    --side:240px;--up:#b8403d;--down:#2e7d52;--brand:#1e2d44;
   }
+  /* 다크 테마 — 토큰만 재정의(컴포넌트는 토큰 경유). --brand는 양쪽 공통(네이비 칩) */
+  :root[data-theme="dark"]{
+    --bg:#0e131b;--surface:#171f2b;--navy:#e7edf5;--navy2:#b9c5d6;--accent:#6f97cf;
+    --muted:#93a0b1;--border:#28323f;--red:#e0736c;--redbg:#2a1a19;--amber:#cfa24a;
+    --amberbg:#241d10;--shadow:0 1px 3px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.34);
+    --up:#e0736c;--down:#5cb98a;
+  }
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0e131b;--surface:#171f2b;--navy:#e7edf5;--navy2:#b9c5d6;--accent:#6f97cf;
+    --muted:#93a0b1;--border:#28323f;--red:#e0736c;--redbg:#2a1a19;--amber:#cfa24a;
+    --amberbg:#241d10;--shadow:0 1px 3px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.34);
+    --up:#e0736c;--down:#5cb98a;
+  }}
   *{box-sizing:border-box}html,body{margin:0;height:100%}
   body{background:var(--bg);color:var(--navy);font-size:14px;line-height:1.55;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
   a{color:inherit}
+  /* 접근성: 키보드 포커스 가시화 + 모션 최소화 */
+  :focus-visible{outline:2.5px solid var(--accent);outline-offset:2px;border-radius:4px}
+  [role="button"],.navitem,.rchip,.chip,.gu,.cp.loc,.wkhead{cursor:pointer}
+  .skip{position:absolute;left:8px;top:-48px;z-index:100;background:var(--surface);color:var(--navy);
+    border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-weight:600;transition:top .12s}
+  .skip:focus{top:8px}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
   /* 헤더 */
-  header{position:fixed;top:0;left:0;right:0;height:56px;background:var(--navy);color:#fff;
+  header{position:fixed;top:0;left:0;right:0;height:56px;background:var(--brand);color:#fff;
     display:flex;align-items:center;gap:12px;padding:0 16px;z-index:1000}
   header h1{font-size:16px;margin:0;letter-spacing:.2px;font-weight:700;white-space:nowrap}
   header .tag{font-size:12px;color:#c2cee0;white-space:nowrap}
   header .stat{font-size:12px;color:#cdd6e4;margin-left:6px}
   #q{flex:1;max-width:520px;margin-left:auto;border:none;border-radius:999px;padding:9px 14px;font-size:13px;font-family:inherit;outline:none}
+  #q:focus-visible{outline:2.5px solid #fff;outline-offset:1px}
   #burger{display:none;background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px}
+  #theme{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff;font-size:15px;
+    cursor:pointer;width:34px;height:34px;min-width:34px;border-radius:9px;margin-left:8px;flex:0 0 auto}
+  #theme:hover{background:rgba(255,255,255,.2)}
   /* 좌측 메뉴 */
   aside{position:fixed;top:56px;bottom:0;left:0;width:var(--side);background:var(--surface);
     border-right:1px solid var(--border);overflow-y:auto;padding:10px 0;z-index:900;display:flex;flex-direction:column}
@@ -600,7 +625,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   .navttl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:8px 6px 4px}
   .navitem{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:13.5px;color:var(--navy2)}
   .navitem:hover{background:#f2f4f7}
-  .navitem.on{background:var(--navy);color:#fff}
+  .navitem.on{background:var(--brand);color:#fff}
   .navitem .c{font-size:11px;color:var(--muted)}
   .navitem.on .c{color:#b9c4d6}
   .gu{padding-left:22px;font-size:13px}
@@ -618,13 +643,13 @@ TEMPLATE = r"""<!DOCTYPE html>
   .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
   .chip{border:1px solid var(--border);background:var(--surface);color:var(--navy2);border-radius:999px;
     padding:6px 12px;font-size:12.5px;cursor:pointer;font-family:inherit}
-  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .chip.on{background:var(--brand);color:#fff;border-color:var(--navy)}
   .chip em{font-style:normal;color:var(--muted);margin-left:3px}.chip.on em{color:#b9c4d6}
   select{border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12.5px;font-family:inherit;background:var(--surface)}
   .crumb{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:2px 2px 12px}
   .crumb .cp{display:inline-flex;align-items:center;gap:5px;font-size:12px;border-radius:999px;
     padding:4px 11px;background:var(--surface);border:1px solid var(--border);color:var(--navy2)}
-  .crumb .cp.loc{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:600}
+  .crumb .cp.loc{background:var(--brand);color:#fff;border-color:var(--navy);font-weight:600}
   .crumb .cp.loc i{color:#b9c4d6;font-style:normal;font-weight:400}
   .crumb .cp.n{font-variant-numeric:tabular-nums}.crumb .cp.n b{color:var(--navy)}
   .crumb .cp.red{background:var(--redbg);color:var(--red);border-color:#f3d4d4}
@@ -765,6 +790,8 @@ TEMPLATE = r"""<!DOCTYPE html>
   .rec-v b{color:var(--red)}
   /* 밴드 분석 */
   .bsec{font-size:14px;color:var(--navy);margin:14px 2px 8px;font-weight:700}
+  .bsec .btag{font-size:10.5px;font-weight:600;color:var(--muted);background:var(--amberbg);border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+  .rt td .bn{font-size:9.5px;color:var(--muted);margin-left:3px;vertical-align:1px}
   /* 아파트 정보 */
   .aptgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
   .aptcard{border:1px solid var(--border);border-radius:10px;padding:11px 13px;background:#fbfcfd}
@@ -788,7 +815,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   .wk{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 15px;margin-bottom:9px;box-shadow:var(--shadow)}
   .wkh{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
   .wwk{display:inline-flex;align-items:center;font-size:12px;font-weight:700;letter-spacing:.2px;
-    color:#fff;background:var(--navy);border-radius:7px;padding:3px 10px;font-variant-numeric:tabular-nums}
+    color:#fff;background:var(--brand);border-radius:7px;padding:3px 10px;font-variant-numeric:tabular-nums}
   .wkh .up{font-size:11px;font-weight:700;color:var(--accent)}
   .wkh .dn{font-size:11px;font-weight:700;color:var(--muted)}
   .wkh .eq{font-size:11px;color:var(--muted)}
@@ -857,15 +884,17 @@ TEMPLATE = r"""<!DOCTYPE html>
 </style>
 </head>
 <body>
+<a class="skip" href="#main">본문 바로가기</a>
 <header>
   <button id="burger" aria-label="메뉴 열기" aria-expanded="false" aria-controls="side">☰</button>
   <h1 id="brand" title="처음으로" role="button" tabindex="0">APT-SIGNAL</h1>
   <span class="tag">수도권 부동산 동향</span>
   <input id="q" type="search" aria-label="단지·지역·키워드 검색" placeholder="🔍 검색 — 단지·지역·키워드">
+  <button id="theme" aria-label="라이트/다크 테마 전환" title="테마 전환">◐</button>
 </header>
 <div class="backdrop" id="backdrop"></div>
 <aside id="side"></aside>
-<main>
+<main id="main" tabindex="-1">
   <div class="crumb" id="crumb"></div>
   <div class="panel" id="view-report">__REPORT__</div>
   <div class="panel" id="view-monitor"></div>
@@ -1256,18 +1285,50 @@ function renderBands(){
     h+='<h2 class="bsec">가격대별</h2>';
     pMetrics.forEach(function(mt){ h+=bandTable(mt,"pband",pbands); });
   }
+  h+=derivedBandsHTML();
   host.innerHTML=h;
+}
+// 뉴스 실거래(제목 파싱)에서 면적대별 시세 분포를 도출 — 공식 밴드지표 부족분 보완(참고용)
+function derivedBandsHTML(){
+  var bucket={};  // sido -> band -> [prices]
+  SIG.forEach(function(s){
+    if(s.cat!=="price"||/(전세|월세)/.test(s.title||"")) return;
+    var m=APT_RE.exec(s.title||""); if(!m) return;
+    var area=parseFloat(m[2]), price=parseFloat(m[3]);
+    if(!(area>10&&area<400)||!(price>=1&&price<=250)) return;
+    var b=areaBand(area), sd=s.sido||"전국";
+    (bucket[sd]=bucket[sd]||{})[b]=(bucket[sd][b]||[]); bucket[sd][b].push(price);
+  });
+  var order=["서울","경기","인천","전국","수도권"];
+  var sidos=Object.keys(bucket).sort(function(a,b){return order.indexOf(a)-order.indexOf(b);});
+  if(!sidos.length) return "";
+  function med(a){a=a.slice().sort(function(x,y){return x-y;});var n=a.length;return n?(n%2?a[(n-1)/2]:(a[n/2-1]+a[n/2])/2):null;}
+  var body=sidos.map(function(sd){
+    var tds=ABANDS.map(function(b){var a=(bucket[sd]||{})[b]||[];
+      if(!a.length) return '<td>·</td>';
+      return '<td><b>'+ (Math.round(med(a)*10)/10) +'</b>억<span class="bn">'+a.length+'</span></td>';}).join("");
+    return '<tr><td>'+esc(sd)+'</td>'+tds+'</tr>';
+  }).join("");
+  var th=ABANDS.map(function(b){return '<th>'+b+'㎡</th>';}).join("");
+  return '<h2 class="bsec">실거래 기반 면적대별 시세 <span class="btag">뉴스 추출·참고</span></h2>'
+    +'<div class="tw"><table class="rt"><thead><tr><th>지역</th>'+th+'</tr></thead><tbody>'+body+'</tbody></table></div>'
+    +'<p class="rdisc">뉴스 실거래 제목에서 전용면적·거래가를 추출해 면적대별 <b>중위 매매가(억)</b>·건수. 개별 신고가 편향이 있어 공식 지표(부동산원 규모별)와 차이가 있으며 <b>참고용</b>. 공식 밴드는 RTMS 자동수집 시 채워집니다.</p>';
 }
 
 /* ---------- 아파트 정보 (실거래 기반 단지 카탈로그) ---------- */
-var APT_RE=/([가-힣A-Za-z0-9·()]+)\s+(\d+(?:\.\d+)?)\s*㎡\s*(\d+(?:\.\d+)?)\s*억/;
+// 단지명 + (선택)전용 + NN㎡ + (층 등) + NN억. '전용' 앞의 실제 단지명을 잡는다.
+var APT_RE=/([가-힣A-Za-z][가-힣A-Za-z0-9·()]{1,})\s+(?:전용\s*)?(\d+(?:\.\d+)?)\s*㎡[^0-9]{0,7}(\d+(?:\.\d+)?)\s*억/;
+// 단지명으로 오추출되기 쉬운 일반명사(쓰레기 단지명 방지)
+var APT_STOP={"전용":1,"국평":1,"전용면적":1,"면적":1,"매매":1,"아파트":1,"신고가":1,"실거래":1,
+  "평균":1,"거래":1,"전세":1,"월세":1,"분양":1,"청약":1,"주택":1,"평형":1,"최고가":1,"직전":1};
+function areaBand(a){return a<=40?"40이하":a<=60?"40-60":a<=85?"60-85":a<=130?"85-130":"130초과";}
 function buildCatalog(){
   var by={};
   SIG.forEach(function(s){
     if(s.cat!=="price"||!s.gu) return;
     var m=APT_RE.exec(s.title||""); if(!m) return;
     var apt=m[1].replace(/^\[.*?\]/,"").trim();
-    if(apt.length<2) return;
+    if(apt.length<2 || APT_STOP[apt] || !/[가-힣]/.test(apt)) return;
     var isJ=/(전세|월세)/.test(s.title);
     var key=s.sido+"|"+s.gu+"|"+apt;
     var o=by[key]||(by[key]={sido:s.sido,gu:s.gu,apt:apt,trades:[]});
@@ -1446,7 +1507,24 @@ function render(){
        :S.view==="weekly"?"🗓 주차별 정리 — 주별 동향(일자 드릴다운)"
        :S.view==="frames"?"📚 부읽남 38강 판단 프레임":"👤 개인 맞춤(정훈) — 보조")+'</span>'; }
   }
+  a11yPass();
 }
+// 접근성 보강: click-only 요소를 키보드로 조작 가능하게(tabindex/role 부여)
+var A11Y_SEL=".navitem,.rchip,.chip,.gu,.cp.loc,.wkhead,.dcard,.regbar .rchip";
+function a11yPass(){
+  document.querySelectorAll(A11Y_SEL).forEach(function(el){
+    if(el.tagName==="BUTTON"||el.tagName==="A") return;
+    if(!el.hasAttribute("tabindex")) el.setAttribute("tabindex","0");
+    if(!el.hasAttribute("role")) el.setAttribute("role","button");
+  });
+}
+document.addEventListener("keydown",function(e){
+  if(e.key!=="Enter"&&e.key!==" ") return;
+  var t=e.target;
+  if(t&&t.matches&&t.matches(A11Y_SEL+',[role="button"]')&&t.tagName!=="BUTTON"&&t.tagName!=="A"&&t.id!=="q"){
+    e.preventDefault(); t.click();
+  }
+});
 
 /* ---------- 이벤트 ---------- */
 document.querySelectorAll(".chip[data-cat]").forEach(function(b){
@@ -1467,6 +1545,14 @@ function closeSide(){document.getElementById("side").classList.remove("open");do
 document.getElementById("burger").onclick=function(){var o=document.getElementById("side").classList.toggle("open");
   document.getElementById("backdrop").classList.toggle("on",o);this.setAttribute("aria-expanded",o?"true":"false");};
 document.getElementById("backdrop").onclick=closeSide;
+// 테마 전환(라이트/다크) — OS 선호 존중 + 수동 오버라이드 저장
+(function(){
+  var root=document.documentElement, btn=document.getElementById("theme");
+  function apply(t){ if(t){root.setAttribute("data-theme",t);} btn.textContent=(cur()==="dark"?"☀":"◐"); }
+  function cur(){ var t=root.getAttribute("data-theme"); return t||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light"); }
+  try{ var sv=localStorage.getItem("apt-theme"); if(sv)apply(sv); else apply(); }catch(e){ apply(); }
+  btn.onclick=function(){ var n=cur()==="dark"?"light":"dark"; apply(n); try{localStorage.setItem("apt-theme",n);}catch(e){} };
+})();
 function goHome(){ S={view:"report",sido:null,gu:null,cat:"",trig:null,q:"",sort:"date_desc"};
   document.getElementById("q").value=""; var so=document.getElementById("sort"); if(so)so.value="date_desc";
   document.querySelectorAll(".chip").forEach(function(x){x.classList.remove("on");});
