@@ -12,6 +12,8 @@ def test_normalize_date():
     assert normalize_date("2026-06-19") == "2026-06-19"
     assert normalize_date("2026.6.9") == "2026-06-09"
     assert normalize_date("2026년 6월 19일") == "2026-06-19"
+    assert normalize_date("Wed, 19 Jun 2026 09:30:00 +0900") == "2026-06-19"  # RFC822(RSS)
+    assert normalize_date("01 Jan 2025") == "2025-01-01"
     assert normalize_date("미정") is None
     assert normalize_date(None) is None
 
