@@ -364,15 +364,12 @@ def _gu_of(addr, sido):
 def lh_lease_collect(key, asof=None, complex_out=None):
     """LH 임대주택단지 조회 → 수도권 시군구별 공공임대 세대수·단지수(집계 지표)
     + 단지 카탈로그(아파트 정보 탭, tenure=임대). 오래된 주공은 built_year<=2000."""
-    import calendar as _cal
     if "여기에" in key:
         print("✗ LH_KEY 미설정: data.go.kr #15059475 활용신청 후 인증키를 LH_KEY 환경변수로", file=sys.stderr)
         return [], []
     if not asof:
         from datetime import date
-        asof = date.today().replace(day=1).isoformat()  # 스냅샷 기준(월초); 아래서 월말로
-    y, m = int(asof[:4]), int(asof[5:7])
-    asof = f"{y:04d}-{m:02d}-{_cal.monthrange(y, m)[1]:02d}"
+        asof = date.today().isoformat()  # 라이브 스냅샷 = 수집일(미래 월말 금지 → '예정' 오배지 방지)
 
     complexes, seen_schema, seen_key = [], False, set()
     for cnp, sido in LH_CNP:
