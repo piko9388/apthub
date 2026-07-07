@@ -544,13 +544,126 @@ def apt_stock_collect(key, uddi="", asof=None):
     return rows, {f"{k[0]}|{k[1]}": v["hh"] for k, v in by_gu.items()}
 
 
+# ── 대안 분모 경로: 국토부 공동주택 목록(#15057332)+기본정보(#15058453) API ──
+# 사용자가 등록한 AptBasisInfoServiceV4를 그대로 사용. 목록 API로 수도권 단지코드를
+# 열거(getSidoAptList3)한 뒤 단지마다 세대수(kaptdaCnt)를 조회해 시군구별 합산.
+# 세대수는 목록에 없고 기본정보에만 있어 단지당 1콜 필요(수도권 수천 콜, 일 쿼터 1만 내).
+KAPT_LIST_URL = os.environ.get("KAPT_LIST_URL", "https://apis.data.go.kr/1613000/AptListService3/getSidoAptList3")
+KAPT_BASIS_URL = os.environ.get("KAPT_BASIS_URL", "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusBassInfoV4")
+KAPT_SIDO = (("11", "서울"), ("28", "인천"), ("41", "경기"))
+KAPT_MAX_BASIS = int(os.environ.get("KAPT_MAX_BASIS", "12000"))  # 안전 상한(쿼터 보호)
+
+
+def _kapt_items(obj):
+    """공동주택 API 응답(JSON/XML)에서 item 리스트 추출(response>body>items>item)."""
+    def dig(o, *ks):
+        for k in ks:
+            o = o.get(k) if isinstance(o, dict) else None
+            if o is None:
+                return None
+        return o
+    it = dig(obj, "response", "body", "items", "item")
+    if it is None:
+        it = dig(obj, "response", "body", "items")
+    if isinstance(it, dict):
+        return [it]
+    return it if isinstance(it, list) else []
+
+
+def _kapt_fetch(url, params):
+    q = urlencode(dict(params, serviceKey=params.get("serviceKey", ""), _type="json"))
+    raw = _http(f"{url}?{q}").decode("utf-8", "replace")
+    try:
+        return json.loads(raw)
+    except Exception:
+        try:
+            return _xml_to_obj(ET.fromstring(raw))
+        except Exception:
+            return {}
+
+
+def apt_stock_kapt_api(key, asof=None):
+    """국토부 공동주택 목록+기본정보 API로 수도권 시군구별 아파트 세대수(분모) 집계.
+    반환: 시도별 '아파트 세대수' rows + 시군구별 세대수 dict."""
+    if "여기에" in key:
+        print("✗ KAPT_KEY 미설정: data.go.kr #15058453/#15057332 활용신청 후 인증키를 KAPT_KEY로", file=sys.stderr)
+        return [], {}
+    if not asof:
+        from datetime import date
+        asof = date.today().isoformat()
+
+    # 1) 수도권 단지코드 열거(목록 API)
+    codes = []   # (kaptCode, sido, sigungu)
+    for sido_cd, sido in KAPT_SIDO:
+        page = 1
+        while page <= 200:
+            obj = _kapt_fetch(KAPT_LIST_URL, {"serviceKey": key, "sidoCode": sido_cd,
+                                              "pageNo": page, "numOfRows": 1000})
+            items = _kapt_items(obj)
+            if not items:
+                if page == 1:
+                    print(f"  ! KAPT 목록 {sido}({sido_cd}) 0건 — 응답 {str(obj)[:160]!r}", file=sys.stderr)
+                break
+            for it in items:
+                kc = _pick(it, ("kaptCode", "KAPT_CODE", "단지코드"))
+                if kc:
+                    codes.append((kc, sido, _pick(it, ("as2", "sigungu", "시군구", "as3"))))
+            if len(items) < 1000:
+                break
+            page += 1; time.sleep(0.03)
+    if not codes:
+        print("  ! KAPT 단지코드 0건 — 목록 API(#15057332) 활용신청·엔드포인트 확인", file=sys.stderr)
+        return [], {}
+    print(f"  · KAPT 수도권 단지코드 {len(codes):,}개 열거", file=sys.stderr)
+    if len(codes) > KAPT_MAX_BASIS:
+        print(f"  · 상한 {KAPT_MAX_BASIS:,} 적용(쿼터 보호) — 초과분 {len(codes)-KAPT_MAX_BASIS:,}개 미조회", file=sys.stderr)
+        codes = codes[:KAPT_MAX_BASIS]
+
+    # 2) 단지별 세대수(기본정보 API) → 시군구 합산
+    by_gu, seen_schema, done = {}, False, 0
+    for kc, sido, gu in codes:
+        obj = _kapt_fetch(KAPT_BASIS_URL, {"serviceKey": key, "kaptCode": kc})
+        items = _kapt_items(obj)
+        if not items:
+            continue
+        r = items[0]
+        if not seen_schema:
+            print(f"  · KAPT 기본정보 첫 레코드 키: {sorted(r.keys())}", file=sys.stderr); seen_schema = True
+        hh_s = _pick(r, ("kaptdaCnt", "세대수", "hshldCnt")).replace(",", "")
+        try: hh = int(float(hh_s))
+        except ValueError: continue
+        bjd = _pick(r, ("bjdCode", "법정동코드"))
+        gu2 = gu or _gu_of(_pick(r, ("kaptAddr", "법정동주소", "doroJuso")), sido)
+        b = by_gu.setdefault((sido, gu2), {"hh": 0, "n": 0})
+        b["hh"] += hh; b["n"] += 1
+        done += 1
+        if done % 500 == 0:
+            print(f"  · KAPT 기본정보 {done:,}/{len(codes):,}", file=sys.stderr)
+        time.sleep(0.03)
+
+    rows, by_sido = [], {}
+    for (sido, gu), b in by_gu.items():
+        s = by_sido.setdefault(sido, {"hh": 0, "n": 0})
+        s["hh"] += b["hh"]; s["n"] += b["n"]
+    for sido, s in by_sido.items():
+        rows.append(_row("아파트 세대수", s["hh"], "세대", sido, asof,
+            f"{sido} 공동주택(아파트) {s['n']:,}개 단지·{s['hh']:,}세대(K-apt 기본정보 집계). 공공임대 비율의 분모",
+            title=f"{sido} 아파트 {s['hh']:,}세대·{s['n']:,}단지 ({asof[:7]}·K-apt)",
+            source="국토교통부 공동주택 기본정보(K-apt)", url="https://www.data.go.kr/data/15058453/openapi.do",
+            confidence="공식", category="stock"))
+    print(f"[kapt-api] 분모 {len(rows)}건(시도) · 조회 {done:,}단지 · 시군구 {len(by_gu)}개", file=sys.stderr)
+    return rows, {f"{k[0]}|{k[1]}": v["hh"] for k, v in by_gu.items()}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rtms", action="store_true", help="RTMS 실거래 수집(주력)")
     ap.add_argument("--ecos", action="store_true", help="ECOS 거시(기준금리 등) 수집")
     ap.add_argument("--kosis", action="store_true", help="KOSIS 규모별/분양가 수집(CONFIG 필요)")
     ap.add_argument("--lh", action="store_true", help="LH 임대주택단지 조회(수도권 공공임대 현황·카탈로그)")
-    ap.add_argument("--kapt", action="store_true", help="K-apt 전국공동주택표준데이터(아파트 세대수=비율 분모)")
+    ap.add_argument("--kapt", action="store_true", help="K-apt 전국공동주택표준데이터 벌크(#15096285, uddi 필요)")
+    ap.add_argument("--kapt-api", dest="kapt_api", action="store_true",
+                    help="K-apt 공동주택 목록+기본정보 API(#15057332+#15058453)로 아파트 세대수(분모)")
     ap.add_argument("--per-gu", action="store_true",
                     help="sido 집계 외에 구 단위 행도 생성(region 필드)")
     ap.add_argument("--months", nargs="+", default=["202605"], help="YYYYMM 복수 가능(시계열)")
@@ -575,8 +688,11 @@ def main():
     if a.kapt:
         kapt_rows, _ = apt_stock_collect(KAPT_KEY, KAPT_STD_UDDI)
         rows += kapt_rows
-    if not (a.rtms or a.ecos or a.kosis or a.lh or a.kapt):
-        sys.exit("✗ 수집 소스 미지정: --rtms / --ecos / --kosis / --lh / --kapt 중 하나 이상")
+    if a.kapt_api:
+        kapt_rows, _ = apt_stock_kapt_api(KAPT_KEY)
+        rows += kapt_rows
+    if not (a.rtms or a.ecos or a.kosis or a.lh or a.kapt or a.kapt_api):
+        sys.exit("✗ 수집 소스 미지정: --rtms / --ecos / --kosis / --lh / --kapt / --kapt-api 중 하나 이상")
 
     seen, uniq = set(), []
     for r in rows:
