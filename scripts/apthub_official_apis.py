@@ -555,19 +555,21 @@ KAPT_MAX_BASIS = int(os.environ.get("KAPT_MAX_BASIS", "12000"))  # 안전 상한
 
 
 def _kapt_items(obj):
-    """공동주택 API 응답(JSON/XML)에서 item 리스트 추출(response>body>items>item)."""
-    def dig(o, *ks):
-        for k in ks:
-            o = o.get(k) if isinstance(o, dict) else None
-            if o is None:
-                return None
-        return o
-    it = dig(obj, "response", "body", "items", "item")
-    if it is None:
-        it = dig(obj, "response", "body", "items")
-    if isinstance(it, dict):
-        return [it]
-    return it if isinstance(it, list) else []
+    """공동주택 API 응답에서 item 리스트 추출. JSON은 response>body>items>item,
+    XML 폴백(_xml_to_obj)은 response 래퍼가 없을 수 있어 body를 직접도 탐색."""
+    if not isinstance(obj, dict):
+        return []
+    resp = obj.get("response")
+    root = resp if isinstance(resp, dict) else obj      # JSON: response 래퍼 / XML폴백: 없음
+    body = root.get("body") if isinstance(root, dict) else None
+    items = (body.get("items") if isinstance(body, dict) else None)
+    if items is None and isinstance(root, dict):
+        items = root.get("items")
+    if isinstance(items, dict):
+        items = items.get("item")
+    if isinstance(items, dict):
+        return [items]
+    return items if isinstance(items, list) else []
 
 
 def _kapt_fetch(url, params):
