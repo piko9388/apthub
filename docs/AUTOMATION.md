@@ -30,10 +30,17 @@ LLM 기반 뉴스(정성) 큐레이션은 유료이므로 자동화하지 않고
 ### 2) ECOS_KEY (한국은행 경제통계, 기준금리 등)
 1. <https://ecos.bok.or.kr> → Open API → 인증키 신청(무료, 즉시 발급)
 
-### 3) 레포 Secrets 등록
+### 3) LH_KEY (LH 임대주택단지 조회 — 공공임대 현황) *선택*
+1. <https://www.data.go.kr/data/15059475/openapi.do> "한국토지주택공사_임대주택단지 조회 서비스" 활용신청(자동승인)
+2. 발급 인증키를 `LH_KEY`로 등록 → 수도권 시군구별 **공공임대 세대수·단지수**와 **임대단지 카탈로그**(아파트 정보 탭, 임대유형·준공 포함, 노후 주공 표시)를 주간 자동 생성
+
+### 4) 레포 Secrets 등록
 GitHub 레포 → **Settings → Secrets and variables → Actions → New repository secret**
 - `RTMS_KEY` = (위 Decoding 키)
 - `ECOS_KEY` = (ECOS 인증키)
+- `LH_KEY` = (LH 임대주택단지 조회 인증키, 선택)
+
+> ⚠️ 인증키는 **절대 코드/시드에 직접 넣지 말 것**. Secrets에만. 노출 시 data.go.kr 마이페이지에서 재발급.
 
 등록 후 **Actions 탭 → Weekly official data crawl → Run workflow** 로 즉시 테스트 가능.
 
@@ -42,6 +49,7 @@ GitHub 레포 → **Settings → Secrets and variables → Actions → New repos
 |---|---|---|
 | 평당가·평형별 실거래가·거래량(실거래) | ✅ | RTMS 주간 cron |
 | 기준금리 | ✅ | ECOS 주간 cron |
+| 공공임대 세대수·단지수 + 임대단지 카탈로그(노후 주공 포함) | ✅ | LH 주간 cron(LH_KEY) |
 | 매매/전세 지수·미분양·청약·경매·분양가·KB지표 | ❌(부분) | 공식 발표를 챗으로 큐레이션 |
 | 정책·거시·반도체 뉴스(정성) | ❌ | 챗 프롬프트로 수집(유료 LLM) |
 
