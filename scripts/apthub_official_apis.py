@@ -85,11 +85,12 @@ def last_day(ym):
     y, mo = int(ym[:4]), int(ym[4:6])
     return f"{y}-{mo:02d}-{calendar.monthrange(y, mo)[1]:02d}"
 
-def _http(url):
+def _http(url, timeout=25, retries=None):
     last = None
-    for i in range(HTTP_RETRY):
+    n = HTTP_RETRY if retries is None else retries
+    for i in range(n):
         try:
-            return urlopen(Request(url, headers=HEADERS), timeout=25, context=_SSL).read()
+            return urlopen(Request(url, headers=HEADERS), timeout=timeout, context=_SSL).read()
         except (HTTPError, URLError, TimeoutError) as e:
             last = e; time.sleep(HTTP_BACKOFF * (i + 1))
     raise last
@@ -572,9 +573,12 @@ def _kapt_items(obj):
     return items if isinstance(items, list) else []
 
 
-def _kapt_fetch(url, params):
+def _kapt_fetch(url, params, timeout=25, retries=None):
     q = urlencode(dict(params, serviceKey=params.get("serviceKey", ""), _type="json"))
-    raw = _http(f"{url}?{q}").decode("utf-8", "replace")
+    try:
+        raw = _http(f"{url}?{q}", timeout=timeout, retries=retries).decode("utf-8", "replace")
+    except Exception:
+        return {}
     try:
         return json.loads(raw)
     except Exception:
@@ -621,27 +625,38 @@ def apt_stock_kapt_api(key, asof=None):
         print(f"  · 상한 {KAPT_MAX_BASIS:,} 적용(쿼터 보호) — 초과분 {len(codes)-KAPT_MAX_BASIS:,}개 미조회", file=sys.stderr)
         codes = codes[:KAPT_MAX_BASIS]
 
-    # 2) 단지별 세대수(기본정보 API) → 시군구 합산
-    by_gu, seen_schema, done = {}, False, 0
-    for kc, sido, gu in codes:
-        obj = _kapt_fetch(KAPT_BASIS_URL, {"serviceKey": key, "kaptCode": kc})
+    # 2) 단지별 세대수(기본정보 API) → 시군구 합산. 수천 콜이라 순차는 과도하게 느려
+    #    (재시도 폭주로 시간 폭증) → 제한 동시성(스레드풀)+짧은 타임아웃+1회 재시도로 견고·신속.
+    from concurrent.futures import ThreadPoolExecutor
+    def _one(item):
+        kc, sido, gu = item
+        obj = _kapt_fetch(KAPT_BASIS_URL, {"serviceKey": key, "kaptCode": kc}, timeout=8, retries=2)
         items = _kapt_items(obj)
         if not items:
-            continue
+            return None
         r = items[0]
-        if not seen_schema:
-            print(f"  · KAPT 기본정보 첫 레코드 키: {sorted(r.keys())}", file=sys.stderr); seen_schema = True
         hh_s = _pick(r, ("kaptdaCnt", "세대수", "hshldCnt")).replace(",", "")
         try: hh = int(float(hh_s))
-        except ValueError: continue
-        bjd = _pick(r, ("bjdCode", "법정동코드"))
+        except ValueError: return None
         gu2 = gu or _gu_of(_pick(r, ("kaptAddr", "법정동주소", "doroJuso")), sido)
-        b = by_gu.setdefault((sido, gu2), {"hh": 0, "n": 0})
-        b["hh"] += hh; b["n"] += 1
-        done += 1
-        if done % 500 == 0:
-            print(f"  · KAPT 기본정보 {done:,}/{len(codes):,}", file=sys.stderr)
-        time.sleep(0.03)
+        return (sido, gu2, hh, sorted(r.keys()))
+
+    by_gu, done, fail, schema = {}, 0, 0, None
+    with ThreadPoolExecutor(max_workers=10) as ex:
+        for res in ex.map(_one, codes):
+            if res is None:
+                fail += 1; continue
+            sido, gu2, hh, keys = res
+            if schema is None:
+                schema = keys
+                print(f"  · KAPT 기본정보 첫 레코드 키: {keys}", file=sys.stderr)
+            b = by_gu.setdefault((sido, gu2), {"hh": 0, "n": 0})
+            b["hh"] += hh; b["n"] += 1
+            done += 1
+            if done % 1000 == 0:
+                print(f"  · KAPT 기본정보 {done:,}/{len(codes):,}", file=sys.stderr)
+    if fail:
+        print(f"  · KAPT 기본정보 조회실패/결측 {fail:,}건(집계 제외)", file=sys.stderr)
 
     rows, by_sido = [], {}
     for (sido, gu), b in by_gu.items():
