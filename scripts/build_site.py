@@ -808,6 +808,8 @@ TEMPLATE = r"""<!DOCTYPE html>
   .apt-j{font-size:11px;color:#2e7d52;margin-top:5px}
   .aptcard.reg{border-color:var(--accent);background:#f7fafd}
   .apt-spec{font-size:11.5px;color:var(--navy);font-weight:600;margin:4px 0 2px}
+  .ten{display:inline-block;font-size:10.5px;font-weight:700;color:#2c6e8f;background:#e6f0f5;border-radius:5px;padding:1px 7px;margin:3px 0}
+  .ten.old{color:var(--amber);background:var(--amberbg)}
   .apt-dev{font-size:11px;color:var(--accent);margin-top:6px}
   /* 월별 정리 */
   .lgd{font-size:11px;color:var(--muted)}
@@ -1221,7 +1223,7 @@ function renderMonitor(){
   if(!MET.length){ host.innerHTML='<div class="lead">동향 모니터링 — 공식 지표 ↔ 뉴스 정합</div>'
     +'<div class="empty">공식 지표(부동산원·KB·한은·국토부) 수집 중입니다. 채워지면 뉴스와 정합해 실제 추세를 보여줍니다.</div>'; return; }
   var macro=["기준금리","COFIX","주택담보대출 금리","가계대출 증감","스트레스DSR 가산금리"];
-  var price=["매매가격지수 변동률","전세가격지수 변동률","주간 매매변동률","주간 전세변동률","KB 매매변동률","5분위 평균매매가","5분위 배율","평당가","평형별 실거래가","전세가율","분양가","청약경쟁률","경매 낙찰가율","PIR","아파트 매매 거래량","주택 매매 거래량","미분양","준공후 미분양","입주물량","매수우위지수","매매전망지수"];
+  var price=["매매가격지수 변동률","전세가격지수 변동률","주간 매매변동률","주간 전세변동률","KB 매매변동률","5분위 평균매매가","5분위 배율","평당가","평형별 실거래가","전세가율","분양가","청약경쟁률","경매 낙찰가율","PIR","아파트 매매 거래량","주택 매매 거래량","미분양","준공후 미분양","입주물량","매수우위지수","매매전망지수","공공임대 세대수","공공임대 단지수"];
   var geos=["전국","수도권","서울","경기","인천"];
   var gc={공식:0,언론:0,추정:0}; MET.forEach(function(m){gc[m.conf||"추정"]=(gc[m.conf||"추정"]||0)+1;});
   var h='<div class="lead">동향 모니터링 — 정량 <b>지표</b>와 정성 <b>뉴스</b>를 정합해 추세 점검 · 지표 '+MET.length+'건</div>'
@@ -1370,8 +1372,10 @@ function regCard(c){
       +'<span class="ad">'+esc(d.date||"")+'</span> 전용 '+d.size_m2+'㎡ <b>'+d.price_eok+'억</b> '+esc(d.type||"")
       +(url?'</a>':'')+'</li>';
   }).join("");
+  var ten=c.tenure==="임대"?'<span class="ten'+((c.built_year&&c.built_year<=2000)?" old":"")+'">🏢 '+esc(c.rental_type||"공공임대")+((c.built_year&&c.built_year<=2000)?" · 노후주공":"")+'</span>':'';
   return '<div class="aptcard reg"><div class="apth"><b>'+esc(c.complex)+'</b>'
     +'<span class="aptloc">'+esc((c.sido||"")+" "+(c.gu||"")+(c.dong?" "+c.dong:""))+'</span></div>'
+    +ten
     +(spec.length?'<div class="apt-spec">'+spec.join(" · ")+'</div>':'')
     +(sizes?'<div class="apt-m">평형 전용 '+esc(sizes)+'㎡</div>':'')
     +(rows?'<ul class="apt-l">'+rows+'</ul>':'')

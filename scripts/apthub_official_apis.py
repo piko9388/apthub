@@ -44,6 +44,7 @@ import xml.etree.ElementTree as ET
 RTMS_KEY  = os.environ.get("RTMS_KEY",  "여기에_RTMS_DECODING_인증키")
 KOSIS_KEY = os.environ.get("KOSIS_KEY", "여기에_KOSIS_API_KEY")
 ECOS_KEY  = os.environ.get("ECOS_KEY",  "여기에_ECOS_인증키")
+LH_KEY    = os.environ.get("LH_KEY",    "여기에_LH_인증키")   # data.go.kr #15059475 임대주택단지 조회
 
 PYEONG = 3.3058                  # 1평 = 3.3058㎡
 _SSL = ssl.create_default_context()
@@ -297,16 +298,173 @@ def kosis_collect(specs, key):
     return rows
 
 # ──────────────────────────── main ────────────────────────────
+# ──────────────────────────── LH 임대주택단지 ────────────────────────────
+LH_URL = "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+# 응답 필드는 LH 봉투 구조라 후보키 다중매칭(태그무관). 첫 레코드 스키마는 자동 출력해 확정.
+LHF = {
+    "region": ("CNP_CD_NM", "지역명", "지역", "LCTN_ARA_NM", "RGN_NM", "brmpNm", "지역본부"),
+    "rtype":  ("AIS_TP_CD_NM", "공급유형", "임대유형", "SPL_TP_CD_NM", "RNTL_KND_NM", "주택유형"),
+    "name":   ("SBD_LGO_NM", "단지명", "BSNS_NM", "LGO_NM", "complexNm", "단지"),
+    "hh":     ("SUM_HSHLDCO", "총세대수", "세대수", "HSHLDCO", "totHshldCo", "HSHLD_CNT", "TOT_HSHLD_CO"),
+    "moved":  ("MVIN_XPC_YM", "최초입주년월", "입주년월", "준공일", "MVIN_YM", "완공일"),
+    "addr":   ("LEG_ADRES", "주소", "단지주소", "도로명주소", "ADRES", "LEGADDR"),
+}
+_SIDO_KEY = {"서울": "서울", "경기": "경기", "인천": "인천"}
+
+
+def _pick(d, keys):
+    for k in keys:
+        if k in d and str(d[k]).strip() not in ("", "None"):
+            return str(d[k]).strip()
+    # 대소문자·공백 무시 재시도
+    low = {str(k).lower().replace(" ", ""): v for k, v in d.items()}
+    for k in keys:
+        kk = k.lower().replace(" ", "")
+        if kk in low and str(low[kk]).strip() not in ("", "None"):
+            return str(low[kk]).strip()
+    return ""
+
+
+def _find_records(obj):
+    """LH 봉투(숫자키/head+row 등)에서 실제 레코드(dict) 리스트를 재귀로 찾는다."""
+    best = []
+    def walk(x):
+        nonlocal best
+        if isinstance(x, list):
+            dicts = [e for e in x if isinstance(e, dict)]
+            # 레코드다움: 단지명/세대수류 키가 있는 dict 리스트
+            if dicts and any(_pick(e, LHF["name"]) or _pick(e, LHF["hh"]) for e in dicts[:3]):
+                if len(dicts) > len(best):
+                    best = dicts
+            for e in x:
+                walk(e)
+        elif isinstance(x, dict):
+            for v in x.values():
+                walk(v)
+    walk(obj)
+    return best
+
+
+def _gu_of(addr, sido):
+    if not addr:
+        return ""
+    import re as _re
+    if sido == "경기":
+        m = _re.search(r"([가-힣]{2,}시)", addr)
+        return m.group(1) if m else ""
+    m = _re.search(r"([가-힣]{1,}구)", addr)
+    return m.group(1) if m else ""
+
+
+def lh_lease_collect(key, asof=None, complex_out=None):
+    """LH 임대주택단지 조회 → 수도권 시군구별 공공임대 세대수·단지수(집계 지표)
+    + 단지 카탈로그(아파트 정보 탭, tenure=임대). 오래된 주공은 built_year<=2000."""
+    import calendar as _cal
+    if "여기에" in key:
+        print("✗ LH_KEY 미설정: data.go.kr #15059475 활용신청 후 인증키를 LH_KEY 환경변수로", file=sys.stderr)
+        return [], []
+    if not asof:
+        from datetime import date
+        asof = date.today().replace(day=1).isoformat()  # 스냅샷 기준(월초); 아래서 월말로
+    y, m = int(asof[:4]), int(asof[5:7])
+    asof = f"{y:04d}-{m:02d}-{_cal.monthrange(y, m)[1]:02d}"
+
+    complexes, page, seen_schema = [], 1, False
+    while page <= 60:
+        q = urlencode({"serviceKey": key, "PG_": page, "PG_SIZE": 100})
+        try:
+            raw = _http(f"{LH_URL}?{q}").decode("utf-8", "replace")
+        except Exception as e:
+            print(f"  ! LH p{page} 요청실패: {e}", file=sys.stderr); break
+        try:
+            obj = json.loads(raw)
+        except Exception:
+            try:  # XML 폴백
+                obj = _xml_to_obj(ET.fromstring(raw))
+            except Exception as e:
+                print(f"  ! LH p{page} 파싱실패: {e} (앞부분 {raw[:140]!r})", file=sys.stderr); break
+        recs = _find_records(obj)
+        if not recs:
+            if page == 1:
+                print(f"  ! LH 레코드 없음 — 응답 앞부분: {raw[:200]!r}", file=sys.stderr)
+            break
+        if not seen_schema:
+            print(f"  · LH 첫 레코드 키: {sorted(recs[0].keys())}", file=sys.stderr); seen_schema = True
+        for r in recs:
+            region = _pick(r, LHF["region"]); addr = _pick(r, LHF["addr"])
+            sido = next((v for k, v in _SIDO_KEY.items() if k in region or k in addr), "")
+            if not sido:
+                continue  # 수도권만
+            hh_s = _pick(r, LHF["hh"]).replace(",", "")
+            try: hh = int(float(hh_s))
+            except ValueError: hh = None
+            moved = _pick(r, LHF["moved"])
+            byear = None
+            mm = re.search(r"(19|20)\d{2}", moved or "")
+            if mm: byear = int(mm.group(0))
+            complexes.append({
+                "complex": _pick(r, LHF["name"]) or "(단지명미상)",
+                "sido": sido, "gu": _gu_of(addr, sido),
+                "households": hh, "built_year": byear,
+                "tenure": "임대", "rental_type": _pick(r, LHF["rtype"]),
+                "dev": ("LH 공공임대" + (" · 노후 주공" if byear and byear <= 2000 else "")),
+                "source_urls": [LH_URL],
+            })
+        if len(recs) < 100: break
+        page += 1; time.sleep(0.12)
+
+    # 집계 지표(시군구/시도별 공공임대 세대수·단지수)
+    rows, by = [], {}
+    for c in complexes:
+        b = by.setdefault(c["sido"], {"hh": 0, "n": 0, "old": 0})
+        b["n"] += 1; b["hh"] += (c["households"] or 0)
+        if c["built_year"] and c["built_year"] <= 2000: b["old"] += 1
+    for sido, b in by.items():
+        rows.append(_row("공공임대 세대수", b["hh"], "세대", sido, asof,
+            f"{sido} LH 공공임대 {b['n']}개 단지·{b['hh']:,}세대(노후주공 {b['old']}단지). LH 임대주택단지 조회 집계",
+            title=f"{sido} 공공임대 {b['hh']:,}세대·{b['n']}단지 ({asof[:7]}·LH)",
+            source="한국토지주택공사 임대주택단지 조회", url=LH_URL, confidence="공식", category="policy"))
+        rows.append(_row("공공임대 단지수", b["n"], "단지", sido, asof,
+            f"{sido} LH 공공임대 단지 {b['n']}개(노후주공 {b['old']}). 임대유형·준공 포함 카탈로그 동시 생성",
+            title=f"{sido} 공공임대 {b['n']}단지 ({asof[:7]}·LH)",
+            source="한국토지주택공사 임대주택단지 조회", url=LH_URL, confidence="공식", category="policy"))
+    if complex_out and complexes:
+        with open(complex_out, "w", encoding="utf-8") as f:
+            json.dump(complexes, f, ensure_ascii=False, indent=2)
+        print(f"[lh] 단지 카탈로그 {len(complexes)}건 → {complex_out}")
+    print(f"[lh] 집계 {len(rows)}건 · 단지 {len(complexes)}건 (수도권)", file=sys.stderr)
+    return rows, complexes
+
+
+def _xml_to_obj(el):
+    """ElementTree → dict/list (JSON 폴백용, 태그를 키로)."""
+    children = list(el)
+    if not children:
+        return el.text or ""
+    out = {}
+    for c in children:
+        v = _xml_to_obj(c)
+        if c.tag in out:
+            if not isinstance(out[c.tag], list): out[c.tag] = [out[c.tag]]
+            out[c.tag].append(v)
+        else:
+            out[c.tag] = v
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rtms", action="store_true", help="RTMS 실거래 수집(주력)")
     ap.add_argument("--ecos", action="store_true", help="ECOS 거시(기준금리 등) 수집")
     ap.add_argument("--kosis", action="store_true", help="KOSIS 규모별/분양가 수집(CONFIG 필요)")
+    ap.add_argument("--lh", action="store_true", help="LH 임대주택단지 조회(수도권 공공임대 현황·카탈로그)")
     ap.add_argument("--per-gu", action="store_true",
                     help="sido 집계 외에 구 단위 행도 생성(region 필드)")
     ap.add_argument("--months", nargs="+", default=["202605"], help="YYYYMM 복수 가능(시계열)")
     ap.add_argument("--out", default="data-out.json")
     ap.add_argument("--complex", dest="complex_path", default=None)
+    ap.add_argument("--complex-out", dest="complex_out", default=None,
+                    help="LH 단지 카탈로그 저장 경로(아파트 정보 탭용)")
     a = ap.parse_args()
 
     rows = []
@@ -318,8 +476,11 @@ def main():
         rows += ecos_collect(ECOS_SPECS, ECOS_KEY)
     if a.kosis:
         rows += kosis_collect(KOSIS_SPECS, KOSIS_KEY)
-    if not (a.rtms or a.ecos or a.kosis):
-        sys.exit("✗ 수집 소스 미지정: --rtms / --ecos / --kosis 중 하나 이상")
+    if a.lh:
+        lh_rows, _ = lh_lease_collect(LH_KEY, complex_out=a.complex_out)
+        rows += lh_rows
+    if not (a.rtms or a.ecos or a.kosis or a.lh):
+        sys.exit("✗ 수집 소스 미지정: --rtms / --ecos / --kosis / --lh 중 하나 이상")
 
     seen, uniq = set(), []
     for r in rows:

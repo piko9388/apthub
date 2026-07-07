@@ -38,10 +38,11 @@ jobs:
         env:
           RTMS_KEY: ${{ secrets.RTMS_KEY }}
           ECOS_KEY: ${{ secrets.ECOS_KEY }}
+          LH_KEY: ${{ secrets.LH_KEY }}
         run: |
-          if [ -z "$RTMS_KEY" ] && [ -z "$ECOS_KEY" ]; then
+          if [ -z "$RTMS_KEY" ] && [ -z "$ECOS_KEY" ] && [ -z "$LH_KEY" ]; then
             echo "skip=1" >> "$GITHUB_OUTPUT"
-            echo "::warning::RTMS_KEY/ECOS_KEY 미설정 — 자동수집 건너뜀. 레포 Secrets에 무료 키를 등록하세요."
+            echo "::warning::RTMS_KEY/ECOS_KEY/LH_KEY 미설정 — 자동수집 건너뜀. 레포 Secrets에 무료 키를 등록하세요."
           fi
 
       - name: 공식 지표 수집(최근 4개월 시계열)
@@ -66,9 +67,25 @@ jobs:
           [ -n "$RTMS_KEY" ] && SRC="$SRC --rtms"
           [ -n "$ECOS_KEY" ] && SRC="$SRC --ecos"
           echo "소스: $SRC"
-          python3 scripts/apthub_official_apis.py $SRC --months $MONTHS \
-            --out data/seed/auto-official-latest.json || \
-            echo "::warning::수집 중 일부 오류(네트워크/쿼터) — 가능한 분량만 반영"
+          if [ -n "$SRC" ]; then
+            python3 scripts/apthub_official_apis.py $SRC --months $MONTHS \
+              --out data/seed/auto-official-latest.json || \
+              echo "::warning::수집 중 일부 오류(네트워크/쿼터) — 가능한 분량만 반영"
+          fi
+
+      - name: LH 공공임대단지 수집(수도권 현황·카탈로그)
+        if: success() && steps.guard.outputs.skip != '1'
+        env:
+          LH_KEY: ${{ secrets.LH_KEY }}
+        run: |
+          if [ -n "$LH_KEY" ]; then
+            python3 scripts/apthub_official_apis.py --lh \
+              --out data/seed/auto-lh-lease.json \
+              --complex-out data/complex/auto-lh.json || \
+              echo "::warning::LH 수집 오류 — 스키마/쿼터 확인(로그의 '첫 레코드 키' 참고)"
+          else
+            echo "LH_KEY 미설정 — LH 임대단지 수집 건너뜀"
+          fi
 
       - name: 빌드 검증(공개판)
         if: success() && steps.guard.outputs.skip != '1'
@@ -81,10 +98,10 @@ jobs:
         run: |
           git config user.name  "apthub-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/seed/auto-official-latest.json
+          git add data/seed/auto-official-latest.json data/seed/auto-lh-lease.json data/complex/auto-lh.json 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "변경 없음 — 커밋 생략"
           else
-            git commit -m "chore(data): 주간 공식 지표 자동 수집(RTMS·ECOS)"
+            git commit -m "chore(data): 주간 공식 지표 자동 수집(RTMS·ECOS·LH 공공임대)"
             git push
           fi
