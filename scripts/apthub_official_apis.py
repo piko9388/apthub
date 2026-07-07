@@ -33,7 +33,7 @@ v2 변경점 (모두 컨테이너 오프라인 테스트로 검증)
 키는 환경변수 우선(RTMS_KEY/KOSIS_KEY/ECOS_KEY).
 주의: RTMS는 실거래(계약일 기준). 네이버 호가와 섞지 말 것. RTMS_KEY는 반드시 Decoding 키.
 """
-import argparse, calendar, json, os, ssl, sys, time
+import argparse, calendar, json, os, re, ssl, sys, time
 import statistics as st
 from urllib.parse import urlencode
 from urllib.request import urlopen, Request
@@ -300,15 +300,20 @@ def kosis_collect(specs, key):
 # ──────────────────────────── main ────────────────────────────
 # ──────────────────────────── LH 임대주택단지 ────────────────────────────
 LH_URL = "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
-# 응답 필드는 LH 봉투 구조라 후보키 다중매칭(태그무관). 첫 레코드 스키마는 자동 출력해 확정.
+# 실검증된 응답 스키마(dsList 레코드): SUM_HSH_CNT 총세대수 / HSH_CNT 세대수 / ARA_NM 지역명 /
+# AIS_TP_CD_NM 공급유형명 / SBD_LGO_NM 단지명 / MVIN_XPC_YM 최초입주년월 / DDO_AR 전용면적 /
+# RFE 월임대료 / LS_GMY 임대보증금 / ALL_CNT 전체건수. 요청변수: PG_SZ, PAGE, CNP_CD(시도2자리).
+# 봉투는 [{dsSch:[...]},{dsList:[...],resHeader:[{SS_CODE:"Y"}]}]. 후보키 다중매칭으로 스키마 변동에도 견고.
 LHF = {
-    "region": ("CNP_CD_NM", "지역명", "지역", "LCTN_ARA_NM", "RGN_NM", "brmpNm", "지역본부"),
-    "rtype":  ("AIS_TP_CD_NM", "공급유형", "임대유형", "SPL_TP_CD_NM", "RNTL_KND_NM", "주택유형"),
-    "name":   ("SBD_LGO_NM", "단지명", "BSNS_NM", "LGO_NM", "complexNm", "단지"),
-    "hh":     ("SUM_HSHLDCO", "총세대수", "세대수", "HSHLDCO", "totHshldCo", "HSHLD_CNT", "TOT_HSHLD_CO"),
-    "moved":  ("MVIN_XPC_YM", "최초입주년월", "입주년월", "준공일", "MVIN_YM", "완공일"),
-    "addr":   ("LEG_ADRES", "주소", "단지주소", "도로명주소", "ADRES", "LEGADDR"),
+    "region": ("ARA_NM", "지역명", "CNP_CD_NM", "지역", "LCTN_ARA_NM"),
+    "rtype":  ("AIS_TP_CD_NM", "공급유형명", "공급유형", "임대유형", "SPL_TP_CD_NM"),
+    "name":   ("SBD_LGO_NM", "단지명", "BSNS_NM", "LGO_NM"),
+    "hh":     ("SUM_HSH_CNT", "총세대수", "HSH_CNT", "세대수", "SUM_HSHLDCO"),
+    "moved":  ("MVIN_XPC_YM", "최초입주년월", "입주년월", "MVIN_YM"),
+    "area":   ("DDO_AR", "전용면적"),
 }
+# LH lhLeaseInfo1 은 CNP_CD(시도 2자리) 필터가 사실상 필수 — 미지정 시 dsList 빈 배열.
+LH_CNP = (("11", "서울"), ("28", "인천"), ("41", "경기"))
 _SIDO_KEY = {"서울": "서울", "경기": "경기", "인천": "인천"}
 
 
@@ -369,49 +374,54 @@ def lh_lease_collect(key, asof=None, complex_out=None):
     y, m = int(asof[:4]), int(asof[5:7])
     asof = f"{y:04d}-{m:02d}-{_cal.monthrange(y, m)[1]:02d}"
 
-    complexes, page, seen_schema = [], 1, False
-    while page <= 60:
-        q = urlencode({"serviceKey": key, "PG_": page, "PG_SIZE": 100})
-        try:
-            raw = _http(f"{LH_URL}?{q}").decode("utf-8", "replace")
-        except Exception as e:
-            print(f"  ! LH p{page} 요청실패: {e}", file=sys.stderr); break
-        try:
-            obj = json.loads(raw)
-        except Exception:
-            try:  # XML 폴백
-                obj = _xml_to_obj(ET.fromstring(raw))
+    complexes, seen_schema, seen_key = [], False, set()
+    for cnp, sido in LH_CNP:
+        page = 1
+        while page <= 40:
+            q = urlencode({"serviceKey": key, "PG_SZ": 100, "PAGE": page, "CNP_CD": cnp})
+            try:
+                raw = _http(f"{LH_URL}?{q}").decode("utf-8", "replace")
             except Exception as e:
-                print(f"  ! LH p{page} 파싱실패: {e} (앞부분 {raw[:140]!r})", file=sys.stderr); break
-        recs = _find_records(obj)
-        if not recs:
-            if page == 1:
-                print(f"  ! LH 레코드 없음 — 응답 앞부분: {raw[:200]!r}", file=sys.stderr)
-            break
-        if not seen_schema:
-            print(f"  · LH 첫 레코드 키: {sorted(recs[0].keys())}", file=sys.stderr); seen_schema = True
-        for r in recs:
-            region = _pick(r, LHF["region"]); addr = _pick(r, LHF["addr"])
-            sido = next((v for k, v in _SIDO_KEY.items() if k in region or k in addr), "")
-            if not sido:
-                continue  # 수도권만
-            hh_s = _pick(r, LHF["hh"]).replace(",", "")
-            try: hh = int(float(hh_s))
-            except ValueError: hh = None
-            moved = _pick(r, LHF["moved"])
-            byear = None
-            mm = re.search(r"(19|20)\d{2}", moved or "")
-            if mm: byear = int(mm.group(0))
-            complexes.append({
-                "complex": _pick(r, LHF["name"]) or "(단지명미상)",
-                "sido": sido, "gu": _gu_of(addr, sido),
-                "households": hh, "built_year": byear,
-                "tenure": "임대", "rental_type": _pick(r, LHF["rtype"]),
-                "dev": ("LH 공공임대" + (" · 노후 주공" if byear and byear <= 2000 else "")),
-                "source_urls": [LH_URL],
-            })
-        if len(recs) < 100: break
-        page += 1; time.sleep(0.12)
+                print(f"  ! LH {sido} p{page} 요청실패: {e}", file=sys.stderr); break
+            try:
+                obj = json.loads(raw)
+            except Exception:
+                try:  # XML 폴백
+                    obj = _xml_to_obj(ET.fromstring(raw))
+                except Exception as e:
+                    print(f"  ! LH {sido} p{page} 파싱실패: {e} (앞부분 {raw[:140]!r})", file=sys.stderr); break
+            recs = _find_records(obj)
+            if not recs:
+                if page == 1:
+                    print(f"  ! LH {sido}(CNP_CD={cnp}) 레코드 없음 — 응답: {raw[:200]!r}", file=sys.stderr)
+                break
+            if not seen_schema:
+                print(f"  · LH 첫 레코드 키: {sorted(recs[0].keys())}", file=sys.stderr); seen_schema = True
+            for r in recs:
+                # 한 단지가 전용면적(타입)별로 여러 행 → (시도·단지명·지역명)으로 유일화, 총세대수는 단지당 1회
+                name = _pick(r, LHF["name"]) or "(단지명미상)"
+                region = _pick(r, LHF["region"])
+                dkey = (sido, name, region)
+                if dkey in seen_key:
+                    continue
+                seen_key.add(dkey)
+                hh_s = _pick(r, LHF["hh"]).replace(",", "")
+                try: hh = int(float(hh_s))
+                except ValueError: hh = None
+                moved = _pick(r, LHF["moved"])
+                byear = None
+                mm = re.search(r"(19|20)\d{2}", moved or "")
+                if mm: byear = int(mm.group(0))
+                complexes.append({
+                    "complex": name, "sido": sido, "gu": _gu_of(region, sido),
+                    "households": hh, "built_year": byear,
+                    "tenure": "임대", "rental_type": _pick(r, LHF["rtype"]) or "공공임대",
+                    "dev": ("LH 공공임대" + (" · 노후 주공" if byear and byear <= 2000 else "")),
+                    "source_urls": [LH_URL],
+                })
+            if len(recs) < 100:
+                break
+            page += 1; time.sleep(0.12)
 
     # 집계 지표(시군구/시도별 공공임대 세대수·단지수)
     rows, by = [], {}
@@ -421,12 +431,14 @@ def lh_lease_collect(key, asof=None, complex_out=None):
         if c["built_year"] and c["built_year"] <= 2000: b["old"] += 1
     for sido, b in by.items():
         rows.append(_row("공공임대 세대수", b["hh"], "세대", sido, asof,
-            f"{sido} LH 공공임대 {b['n']}개 단지·{b['hh']:,}세대(노후주공 {b['old']}단지). LH 임대주택단지 조회 집계",
-            title=f"{sido} 공공임대 {b['hh']:,}세대·{b['n']}단지 ({asof[:7]}·LH)",
+            f"{sido} LH 임대주택단지 조회 노출 {b['n']}개 단지·{b['hh']:,}세대(노후주공 {b['old']}단지). "
+            f"본 API는 현재 공고·모집 노출 단지 기준(전체 재고 아님)",
+            title=f"{sido} LH 노출임대 {b['hh']:,}세대·{b['n']}단지 ({asof[:7]})",
             source="한국토지주택공사 임대주택단지 조회", url=LH_URL, confidence="공식", category="policy"))
         rows.append(_row("공공임대 단지수", b["n"], "단지", sido, asof,
-            f"{sido} LH 공공임대 단지 {b['n']}개(노후주공 {b['old']}). 임대유형·준공 포함 카탈로그 동시 생성",
-            title=f"{sido} 공공임대 {b['n']}단지 ({asof[:7]}·LH)",
+            f"{sido} LH 노출 임대단지 {b['n']}개(노후주공 {b['old']}). 임대유형·준공·전용면적 포함 카탈로그 동시 생성. "
+            f"현재 공고·모집 기준이라 영구·국민임대 등 비노출분은 제외",
+            title=f"{sido} LH 노출임대 {b['n']}단지 ({asof[:7]})",
             source="한국토지주택공사 임대주택단지 조회", url=LH_URL, confidence="공식", category="policy"))
     if complex_out and complexes:
         with open(complex_out, "w", encoding="utf-8") as f:
