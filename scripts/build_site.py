@@ -340,6 +340,30 @@ def _latest_metric(dat, metric, sido, official_only=False):
     return xs[-1], (xs[-2] if len(xs) > 1 else None)
 
 
+def synth_lease_ratio(dat):
+    """공공임대 비율(%) = 공공임대 세대수(분자) ÷ 아파트 세대수(분모) × 100, 시도별 산출.
+    분자·분모 지표가 모두 있을 때만 생성. 자체 산출값이라 신뢰도 '추정'(○).
+    분자는 현재 LH/마이홈 임대 세대수, 분모는 K-apt 전수 아파트 세대수."""
+    from apthub.schema import Signal
+    out = []
+    for sido in ("서울", "인천", "경기"):
+        num, _ = _latest_metric(dat, "공공임대 세대수", sido)
+        den, _ = _latest_metric(dat, "아파트 세대수", sido)
+        if not num or not den or not den.value:
+            continue
+        pct = round(num.value / den.value * 100, 2)
+        out.append(Signal(
+            title=f"{sido} 공공임대 비율 {pct}% (임대 {int(num.value):,} ÷ 아파트 {int(den.value):,}세대)",
+            source="APT-SIGNAL 산출(임대 세대수 ÷ K-apt 아파트 세대수)",
+            summary=f"{sido} 공공임대 {int(num.value):,}세대를 전체 아파트 {int(den.value):,}세대로 나눈 비율. "
+                    f"분자 출처·범위에 따라 값이 달라지므로 참고용(자체 산출).",
+            url="https://www.data.go.kr/data/15096285/standard.do",
+            date=max(num.date or "", den.date or "") or None,
+            category="policy", sido=sido, confidence="추정",
+            kind="data", metric="공공임대 비율", value=pct, unit="%"))
+    return out
+
+
 _CONFMARK = {"공식": "●", "언론": "◐", "추정": "○"}
 
 
@@ -498,6 +522,7 @@ def build():
     # 두 트랙 분리: news(기사·정성) vs data(공식 지표·정량)
     news = [s for s in sigs if getattr(s, "kind", "news") != "data"]
     dat = [s for s in sigs if getattr(s, "kind", "news") == "data"]
+    dat += synth_lease_ratio(dat)  # 공공임대 비율(임대÷아파트 세대수) 파생 지표
     reds = sum(1 for s in news if s.trigger == "red")
     yellows = sum(1 for s in news if s.trigger == "yellow")
     _dates = sorted(s.date for s in sigs if s.date and s.date <= datetime.now().strftime("%Y-%m-%d"))
@@ -1223,7 +1248,7 @@ function renderMonitor(){
   if(!MET.length){ host.innerHTML='<div class="lead">동향 모니터링 — 공식 지표 ↔ 뉴스 정합</div>'
     +'<div class="empty">공식 지표(부동산원·KB·한은·국토부) 수집 중입니다. 채워지면 뉴스와 정합해 실제 추세를 보여줍니다.</div>'; return; }
   var macro=["기준금리","COFIX","주택담보대출 금리","가계대출 증감","스트레스DSR 가산금리"];
-  var price=["매매가격지수 변동률","전세가격지수 변동률","주간 매매변동률","주간 전세변동률","KB 매매변동률","5분위 평균매매가","5분위 배율","평당가","평형별 실거래가","전세가율","분양가","청약경쟁률","경매 낙찰가율","PIR","아파트 매매 거래량","주택 매매 거래량","미분양","준공후 미분양","입주물량","매수우위지수","매매전망지수","공공임대 세대수","공공임대 단지수"];
+  var price=["매매가격지수 변동률","전세가격지수 변동률","주간 매매변동률","주간 전세변동률","KB 매매변동률","5분위 평균매매가","5분위 배율","평당가","평형별 실거래가","전세가율","분양가","청약경쟁률","경매 낙찰가율","PIR","아파트 매매 거래량","주택 매매 거래량","미분양","준공후 미분양","입주물량","매수우위지수","매매전망지수","공공임대 세대수","공공임대 단지수","아파트 세대수","공공임대 비율"];
   var geos=["전국","수도권","서울","경기","인천"];
   var gc={공식:0,언론:0,추정:0}; MET.forEach(function(m){gc[m.conf||"추정"]=(gc[m.conf||"추정"]||0)+1;});
   var h='<div class="lead">동향 모니터링 — 정량 <b>지표</b>와 정성 <b>뉴스</b>를 정합해 추세 점검 · 지표 '+MET.length+'건</div>'
