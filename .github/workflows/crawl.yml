@@ -93,7 +93,6 @@ jobs:
         env:
           KAPT_KEY: ${{ secrets.KAPT_KEY }}
           KAPT_STD_UDDI: ${{ secrets.KAPT_STD_UDDI }}
-          KAPT_PROBE: "1"   # 임시 진단: 기본정보 원응답 덤프(끝나면 제거)
         run: |
           if [ -n "$KAPT_KEY" ] && [ -n "$KAPT_STD_UDDI" ]; then
             # 벌크 표준데이터(#15096285) 경로 — uddi 있을 때

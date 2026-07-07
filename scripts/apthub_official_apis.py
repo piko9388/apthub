@@ -634,6 +634,20 @@ def apt_stock_kapt_api(key, asof=None):
         print(f"  · 상한 {KAPT_MAX_BASIS:,} 적용(쿼터 보호) — 초과분 {len(codes)-KAPT_MAX_BASIS:,}개 미조회", file=sys.stderr)
         codes = codes[:KAPT_MAX_BASIS]
 
+    # 프리플라이트: 기본정보 3건을 순차 시험. 전부 실패(429/쿼터)면 전체 수집을 조기 중단
+    #    — 수도권 아파트(약 1만 단지) > 기본정보 일 쿼터 1만이라 429가 상시 발생 가능.
+    #    doomed한 수만 콜(35분+)을 낭비하지 않도록 방어. (해결: 벌크 #15096285 사용)
+    ok = 0
+    for kc, _, _ in codes[:3]:
+        if _kapt_items(_kapt_fetch(KAPT_BASIS_URL, {"serviceKey": key, "kaptCode": kc}, timeout=12, retries=1)):
+            ok += 1
+        time.sleep(0.4)
+    if ok == 0:
+        print("  ! KAPT 기본정보 프리플라이트 전건 실패(429/쿼터 추정) — 수집 중단.\n"
+              "    수도권 단지수(~1.0만) > 기본정보 일 쿼터(1만). 벌크 표준데이터(#15096285,"
+              " KAPT_STD_UDDI)로 전환 권장.", file=sys.stderr)
+        return [], {}
+
     # 2) 단지별 세대수(기본정보 API) → 시군구 합산. 수천 콜이라 순차는 과도하게 느려
     #    (재시도 폭주로 시간 폭증) → 제한 동시성(스레드풀)+짧은 타임아웃+1회 재시도로 견고·신속.
     from concurrent.futures import ThreadPoolExecutor
