@@ -1391,18 +1391,33 @@ function renderApt(){
     der=der.filter(function(o){return (o.apt+o.sido+o.gu).toLowerCase().indexOf(S.q)>=0;}); }
   der.sort(function(a,b){return b.trades.length-a.trades.length;});
   var CAP=80, shown=der.slice(0,CAP);
-  var h='<div class="lead">아파트 정보 — 등록 단지 '+CATALOG.length+'개(제원 포함) · 실거래 추출 '+der.length+'단지'
-    +' · 매매/전세 최근순. 단지 클릭 시 원문.</div>';
-  if(reg.length){
+  // 등록 단지를 일반(제원·실거래)과 LH 공공임대(대량)로 분리 — 임대는 세대수 순 상한 표시.
+  var seed=reg.filter(function(c){return c.tenure!=="임대";});
+  var lease=reg.filter(function(c){return c.tenure==="임대";});
+  lease.sort(function(a,b){
+    var ao=(a.built_year&&a.built_year<=2000)?1:0, bo=(b.built_year&&b.built_year<=2000)?1:0;
+    if(ao!==bo) return bo-ao;                       // 노후 주공 우선 노출
+    return (b.households||0)-(a.households||0); });  // 그다음 세대수 큰 순
+  var LCAP=60, leaseShown=lease.slice(0,LCAP);
+  var leaseOld=lease.filter(function(c){return c.built_year&&c.built_year<=2000;}).length;
+  var h='<div class="lead">아파트 정보 — 등록 '+seed.length+'개(제원 포함)'
+    +(lease.length?' · LH 공공임대 '+lease.length+'개(노출 기준·노후주공 '+leaseOld+')':'')
+    +' · 실거래 추출 '+der.length+'단지 · 단지 클릭 시 원문.</div>';
+  if(seed.length){
     h+='<h2 class="bsec">등록 단지 (제원 포함)</h2><div class="aptgrid">'
-      +reg.map(regCard).join("")+'</div>';
+      +seed.map(regCard).join("")+'</div>';
+  }
+  if(leaseShown.length){
+    h+='<h2 class="bsec">공공임대 단지 (LH · 현재 공고·모집 노출)</h2><div class="aptgrid">'
+      +leaseShown.map(regCard).join("")+'</div>'
+      +(lease.length>LCAP?'<p class="rdisc">세대수 상위 '+LCAP+'개 표시(전체 '+lease.length+'개는 상단 <b>공공임대 세대수·단지수</b> 지표로 집계) · 검색으로 좁히기. LH 임대주택단지 조회 API는 전체 재고가 아닌 현재 노출분 기준.</p>':'');
   }
   if(shown.length){
     h+='<h2 class="bsec">실거래 추출 단지</h2><div class="aptgrid">'
       +shown.map(derivedCard).join("")+'</div>'
       +(der.length>CAP?'<p class="rdisc">상위 '+CAP+'단지 표시 · 검색으로 좁히기 · 더 많은 제원은 <code>scripts/apthub_official_apis.py --complex</code>로 생성.</p>':'');
   }
-  if(!reg.length && !shown.length) h+='<div class="empty">단지가 없습니다. 검색어를 바꿔보세요.</div>';
+  if(!seed.length && !leaseShown.length && !shown.length) h+='<div class="empty">단지가 없습니다. 검색어를 바꿔보세요.</div>';
   host.innerHTML=h;
 }
 
