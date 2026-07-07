@@ -621,6 +621,15 @@ def apt_stock_kapt_api(key, asof=None):
         print("  ! KAPT 단지코드 0건 — 목록 API(#15057332) 활용신청·엔드포인트 확인", file=sys.stderr)
         return [], {}
     print(f"  · KAPT 수도권 단지코드 {len(codes):,}개 열거", file=sys.stderr)
+    if os.environ.get("KAPT_PROBE"):   # 진단: 기본정보 원응답 5건 덤프 후 종료
+        for kc, sido, gu in codes[:5]:
+            q = urlencode({"serviceKey": key, "kaptCode": kc, "_type": "json"})
+            try:
+                raw = _http(f"{KAPT_BASIS_URL}?{q}", timeout=15, retries=1).decode("utf-8", "replace")
+            except Exception as e:
+                raw = f"EXC {e}"
+            print(f"  · PROBE {kc}: {raw[:400]!r}", file=sys.stderr)
+        return [], {}
     if len(codes) > KAPT_MAX_BASIS:
         print(f"  · 상한 {KAPT_MAX_BASIS:,} 적용(쿼터 보호) — 초과분 {len(codes)-KAPT_MAX_BASIS:,}개 미조회", file=sys.stderr)
         codes = codes[:KAPT_MAX_BASIS]
