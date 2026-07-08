@@ -300,6 +300,82 @@ def kosis_collect(specs, key):
                 url="https://kosis.kr/openapi/", category=s.get("category","price"), **extra))
     return rows
 
+
+# ── KOSIS 아파트 재고(분모) — 시도별 아파트 호수/세대 집계 ──
+# 통계표 코드는 표별로 달라 env로 조정 가능(첫 실행 로그의 원레코드로 확정).
+# 기본값: 통계청 인구주택총조사 '주택의 종류별 주택'(연간). itm=호수, 지역=C1/C2.
+KOSIS_APT = {
+    "org": os.environ.get("KOSIS_APT_ORG", "101"),
+    "tbl": os.environ.get("KOSIS_APT_TBL", "DT_1JU1501"),
+    "itm": os.environ.get("KOSIS_APT_ITM", "T20"),      # 호수
+    "objL1": os.environ.get("KOSIS_APT_OBJL1", ""),     # 지역(비우면 전체 후 필터)
+    "objL2": os.environ.get("KOSIS_APT_OBJL2", ""),     # 주택종류(아파트) — 표에 따라
+    "prdSe": os.environ.get("KOSIS_APT_PRDSE", "Y"),
+}
+_KOSIS_SIDO = {"서울": "서울", "인천": "인천", "경기": "경기"}
+
+
+def apt_stock_kosis(key, asof=None):
+    """KOSIS 통계표에서 수도권 시도별 아파트 호수(≈세대수, 분모) 집계.
+    표 코드가 다르면 첫 실행 로그의 '원레코드'를 보고 KOSIS_APT_* env로 교정."""
+    if "여기에" in key or not key:
+        print("✗ KOSIS_KEY 미설정: kosis.kr/openapi 인증키를 KOSIS_KEY로", file=sys.stderr)
+        return [], {}
+    if not asof:
+        from datetime import date
+        asof = date.today().isoformat()
+    base = "https://kosis.kr/openapi/Param/statisticsParameterData.do"
+    params = {"method": "getList", "apiKey": key, "orgId": KOSIS_APT["org"],
+              "tblId": KOSIS_APT["tbl"], "itmId": KOSIS_APT["itm"],
+              "prdSe": KOSIS_APT["prdSe"], "startPrdDe": "2020", "endPrdDe": "2030",
+              "format": "json", "jsonVD": "Y"}
+    if KOSIS_APT["objL1"]:
+        params["objL1"] = KOSIS_APT["objL1"]
+    if KOSIS_APT["objL2"]:
+        params["objL2"] = KOSIS_APT["objL2"]
+    try:
+        js = json.loads(_http(f"{base}?{urlencode(params)}").decode("utf-8", "replace"))
+    except Exception as e:
+        print(f"  ! KOSIS 아파트재고 요청/파싱 실패: {e}", file=sys.stderr); return [], {}
+    if isinstance(js, dict) and js.get("err"):
+        print(f"  ✗ KOSIS 오류: {js.get('errMsg', js.get('err'))} — KOSIS_APT_* 코드 확인", file=sys.stderr)
+        return [], {}
+    items = js if isinstance(js, list) else []
+    if not items:
+        print(f"  ! KOSIS 응답 0건 — 표/코드 확인. 응답: {str(js)[:200]!r}", file=sys.stderr)
+        return [], {}
+    print(f"  · KOSIS 첫 레코드: {json.dumps(items[0], ensure_ascii=False)[:300]}", file=sys.stderr)
+    def _names(it):
+        return " ".join(str(it.get(k, "")) for k in ("C1_NM", "C2_NM", "C3_NM", "ITM_NM"))
+    # 주택종류 차원이 있으면(어느 레코드든 '아파트' 언급) 아파트 레코드만 채택.
+    # 아파트-전용 표면 언급이 없어 전부 채택. → 단독/연립/다세대·합계 오채택 방지.
+    has_type = any("아파트" in _names(it) for it in items)
+    by_sido, latest = {}, {}
+    for it in items:
+        names = _names(it)
+        if has_type and "아파트" not in names:
+            continue
+        sido = next((v for k, v in _KOSIS_SIDO.items() if k in names), "")
+        if not sido:
+            continue
+        try:
+            val = float(it.get("DT", ""))
+        except (ValueError, TypeError):
+            continue
+        prd = it.get("PRD_DE", "")
+        if prd >= latest.get(sido, ""):        # 최신 기간 값 채택
+            latest[sido] = prd; by_sido[sido] = val
+    rows = []
+    for sido, val in by_sido.items():
+        rows.append(_row("아파트 세대수", int(val), "세대", sido, asof,
+            f"{sido} 아파트 {int(val):,}호(≈세대, KOSIS {KOSIS_APT['org']}/{KOSIS_APT['tbl']}). 공공임대 비율의 분모",
+            title=f"{sido} 아파트 {int(val):,}호 ({latest.get(sido,'')[:4]}·KOSIS)",
+            source=f"KOSIS {KOSIS_APT['org']}/{KOSIS_APT['tbl']}",
+            url="https://kosis.kr/openapi/", confidence="공식", category="stock"))
+    print(f"[kosis] 분모 {len(rows)}건(시도) — { {k:int(v) for k,v in by_sido.items()} }", file=sys.stderr)
+    return rows, {}
+
+
 # ──────────────────────────── main ────────────────────────────
 # ──────────────────────────── LH 임대주택단지 ────────────────────────────
 LH_URL = "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
@@ -704,6 +780,8 @@ def main():
     ap.add_argument("--kapt", action="store_true", help="K-apt 전국공동주택표준데이터 벌크(#15096285, uddi 필요)")
     ap.add_argument("--kapt-api", dest="kapt_api", action="store_true",
                     help="K-apt 공동주택 목록+기본정보 API(#15057332+#15058453)로 아파트 세대수(분모)")
+    ap.add_argument("--kosis-stock", dest="kosis_stock", action="store_true",
+                    help="KOSIS 시도별 아파트 호수(≈세대수·비율 분모, 쿼터벽 없음)")
     ap.add_argument("--per-gu", action="store_true",
                     help="sido 집계 외에 구 단위 행도 생성(region 필드)")
     ap.add_argument("--months", nargs="+", default=["202605"], help="YYYYMM 복수 가능(시계열)")
@@ -731,8 +809,11 @@ def main():
     if a.kapt_api:
         kapt_rows, _ = apt_stock_kapt_api(KAPT_KEY)
         rows += kapt_rows
-    if not (a.rtms or a.ecos or a.kosis or a.lh or a.kapt or a.kapt_api):
-        sys.exit("✗ 수집 소스 미지정: --rtms / --ecos / --kosis / --lh / --kapt / --kapt-api 중 하나 이상")
+    if a.kosis_stock:
+        ks_rows, _ = apt_stock_kosis(KOSIS_KEY)
+        rows += ks_rows
+    if not (a.rtms or a.ecos or a.kosis or a.lh or a.kapt or a.kapt_api or a.kosis_stock):
+        sys.exit("✗ 수집 소스 미지정: --rtms / --ecos / --kosis / --lh / --kapt / --kapt-api / --kosis-stock 중 하나 이상")
 
     seen, uniq = set(), []
     for r in rows:

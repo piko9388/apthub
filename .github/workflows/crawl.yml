@@ -40,10 +40,11 @@ jobs:
           ECOS_KEY: ${{ secrets.ECOS_KEY }}
           LH_KEY: ${{ secrets.LH_KEY }}
           KAPT_KEY: ${{ secrets.KAPT_KEY }}
+          KOSIS_KEY: ${{ secrets.KOSIS_KEY }}
         run: |
-          if [ -z "$RTMS_KEY" ] && [ -z "$ECOS_KEY" ] && [ -z "$LH_KEY" ] && [ -z "$KAPT_KEY" ]; then
+          if [ -z "$RTMS_KEY" ] && [ -z "$ECOS_KEY" ] && [ -z "$LH_KEY" ] && [ -z "$KAPT_KEY" ] && [ -z "$KOSIS_KEY" ]; then
             echo "skip=1" >> "$GITHUB_OUTPUT"
-            echo "::warning::RTMS_KEY/ECOS_KEY/LH_KEY/KAPT_KEY 미설정 — 자동수집 건너뜀. 레포 Secrets에 무료 키를 등록하세요."
+            echo "::warning::수집 키 미설정 — 자동수집 건너뜀. 레포 Secrets에 무료 키를 등록하세요."
           fi
 
       - name: 공식 지표 수집(최근 4개월 시계열)
@@ -88,24 +89,25 @@ jobs:
             echo "LH_KEY 미설정 — LH 임대단지 수집 건너뜀"
           fi
 
-      - name: K-apt 아파트 재고 수집(공공임대 비율 분모)
+      - name: 아파트 재고 수집(공공임대 비율 분모)
         if: success() && steps.guard.outputs.skip != '1'
         env:
+          KOSIS_KEY: ${{ secrets.KOSIS_KEY }}
           KAPT_KEY: ${{ secrets.KAPT_KEY }}
           KAPT_STD_UDDI: ${{ secrets.KAPT_STD_UDDI }}
         run: |
-          if [ -n "$KAPT_KEY" ] && [ -n "$KAPT_STD_UDDI" ]; then
-            # 벌크 표준데이터(#15096285) 경로 — uddi 있을 때
+          if [ -n "$KOSIS_KEY" ]; then
+            # 권장: KOSIS 시도별 아파트 호수(≈세대) — 쿼터벽 없음(집계 통계)
+            python3 scripts/apthub_official_apis.py --kosis-stock \
+              --out data/seed/auto-kapt-stock.json || \
+              echo "::warning::KOSIS 아파트재고 오류 — 표코드(KOSIS_APT_*) 확인(로그의 '첫 레코드' 참고)"
+          elif [ -n "$KAPT_KEY" ] && [ -n "$KAPT_STD_UDDI" ]; then
+            # 대안: 벌크 표준데이터(#15096285) — uddi 있을 때
             python3 scripts/apthub_official_apis.py --kapt \
               --out data/seed/auto-kapt-stock.json || \
               echo "::warning::K-apt 벌크 수집 오류 — uddi/쿼터 확인(로그 참고)"
-          elif [ -n "$KAPT_KEY" ]; then
-            # 목록+기본정보 API(#15057332+#15058453) 경로 — uddi 불필요(단지당 1콜)
-            python3 scripts/apthub_official_apis.py --kapt-api \
-              --out data/seed/auto-kapt-stock.json || \
-              echo "::warning::K-apt API 수집 오류 — 목록(#15057332) 활용신청·쿼터 확인(로그 참고)"
           else
-            echo "KAPT_KEY 미설정 — 아파트 재고(분모) 수집 건너뜀"
+            echo "KOSIS_KEY/KAPT 벌크 미설정 — 아파트 재고(분모) 수집 건너뜀(단지별 API는 쿼터벽으로 제외)"
           fi
 
       - name: 빌드 검증(공개판)
