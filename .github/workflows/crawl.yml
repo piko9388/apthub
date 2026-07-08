@@ -16,6 +16,8 @@ on:
   schedule:
     - cron: "0 21 * * 0"   # 매주 일요일 21:00 UTC = 월요일 06:00 KST
   workflow_dispatch:        # 수동 실행(테스트)용
+  push:                     # 트리거 파일 갱신으로도 실행(API 없이 git push만으로 발화)
+    paths: [".github/trigger-crawl"]
 
 permissions:
   contents: write           # 수집 결과를 main에 커밋
