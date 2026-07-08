@@ -598,6 +598,8 @@ def apt_stock_collect(key, uddi="", asof=None):
             hh_s = _pick(r, KAPTF["hh"]).replace(",", "")
             try: hh = int(float(hh_s))
             except ValueError: continue
+            if hh < KAPT_MIN_HH:
+                continue  # 비율 기준(300세대+)과 정합 — 분모 기준 통일
             gu = _pick(r, KAPTF["sigungu"])
             b = by_gu.setdefault((sido, gu), {"hh": 0, "n": 0})
             b["hh"] += hh; b["n"] += 1
@@ -615,22 +617,27 @@ def apt_stock_collect(key, uddi="", asof=None):
         s["hh"] += b["hh"]; s["n"] += b["n"]
     for sido, s in by_sido.items():
         rows.append(_row("아파트 세대수", s["hh"], "세대", sido, asof,
-            f"{sido} 공동주택(아파트) {s['n']:,}개 단지·{s['hh']:,}세대(K-apt 전수). 공공임대 비율의 분모",
-            title=f"{sido} 아파트 {s['hh']:,}세대·{s['n']:,}단지 ({asof[:7]}·K-apt)",
+            f"{sido} 아파트 {KAPT_MIN_HH}세대 이상 단지 {s['n']:,}개·{s['hh']:,}세대(K-apt 표준데이터). "
+            f"공공임대 비율의 분모(동일 기준)",
+            title=f"{sido} 아파트 {s['hh']:,}세대·{s['n']:,}단지 ({asof[:7]}·{KAPT_MIN_HH}세대+)",
             source="국토교통부 전국공동주택표준데이터(K-apt)", url="https://www.data.go.kr/data/15096285/standard.do",
             confidence="공식", category="stock"))
-    print(f"[kapt] 분모 {len(rows)}건(시도) · 시군구 {len(by_gu)}개 (수도권)", file=sys.stderr)
+    print(f"[kapt] 분모 {len(rows)}건(시도·{KAPT_MIN_HH}세대+) · 시군구 {len(by_gu)}개 (수도권)", file=sys.stderr)
     return rows, {f"{k[0]}|{k[1]}": v["hh"] for k, v in by_gu.items()}
 
 
-# ── 대안 분모 경로: 국토부 공동주택 목록(#15057332)+기본정보(#15058453) API ──
-# 사용자가 등록한 AptBasisInfoServiceV4를 그대로 사용. 목록 API로 수도권 단지코드를
-# 열거(getSidoAptList3)한 뒤 단지마다 세대수(kaptdaCnt)를 조회해 시군구별 합산.
-# 세대수는 목록에 없고 기본정보에만 있어 단지당 1콜 필요(수도권 수천 콜, 일 쿼터 1만 내).
+# ── 분모 경로: 국토부 공동주택 목록(#15057332)+기본정보(#15058453) API ──
+# 목록 API로 단지코드를 열거(getSidoAptList3)한 뒤 단지마다 세대수(kaptdaCnt)를 조회.
+# 세대수는 목록에 없고 기본정보에만 있어 단지당 1콜 필요.
+# ⚠️ 기본정보 일 쿼터 10,000 — 수도권 전체(10,155단지)는 초과. 기본 대상은 서울·인천만
+#   (합계 수천 단지, 쿼터 내 전수). 집계는 300세대 이상 단지 기준 — 300세대+는
+#   공동주택관리법상 의무관리대상이라 K-apt 등록이 사실상 전수여서 분모 완전성이 보장된다.
 KAPT_LIST_URL = os.environ.get("KAPT_LIST_URL", "https://apis.data.go.kr/1613000/AptListService3/getSidoAptList3")
 KAPT_BASIS_URL = os.environ.get("KAPT_BASIS_URL", "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusBassInfoV4")
-KAPT_SIDO = (("11", "서울"), ("28", "인천"), ("41", "경기"))
-KAPT_MAX_BASIS = int(os.environ.get("KAPT_MAX_BASIS", "12000"))  # 안전 상한(쿼터 보호)
+KAPT_SIDO_NM = {"11": "서울", "28": "인천", "41": "경기"}
+KAPT_SIDOS = [c.strip() for c in os.environ.get("KAPT_SIDOS", "11,28").split(",") if c.strip()]
+KAPT_MIN_HH = int(os.environ.get("KAPT_MIN_HH", "300"))       # 집계 최소 세대수(비율 기준과 정합)
+KAPT_MAX_BASIS = int(os.environ.get("KAPT_MAX_BASIS", "9000"))  # 일 쿼터(1만) 내 안전 상한
 
 
 def _kapt_items(obj):
@@ -667,38 +674,69 @@ def _kapt_fetch(url, params, timeout=25, retries=None):
 
 
 def apt_stock_kapt_api(key, asof=None):
-    """국토부 공동주택 목록+기본정보 API로 수도권 시군구별 아파트 세대수(분모) 집계.
+    """국토부 공동주택 목록+기본정보 API로 시도별 아파트 세대수(분모) 집계.
+    기본 대상: 서울·인천(KAPT_SIDOS) · 집계는 세대수 KAPT_MIN_HH(300)+ 단지 기준.
+    300세대+는 의무관리대상이라 K-apt 등록이 사실상 전수 → 분모 완전성 확보.
     반환: 시도별 '아파트 세대수' rows + 시군구별 세대수 dict."""
-    if "여기에" in key:
+    if not key or "여기에" in key:
         print("✗ KAPT_KEY 미설정: data.go.kr #15058453/#15057332 활용신청 후 인증키를 KAPT_KEY로", file=sys.stderr)
         return [], {}
     if not asof:
         from datetime import date
         asof = date.today().isoformat()
 
-    # 1) 수도권 단지코드 열거(목록 API)
-    codes = []   # (kaptCode, sido, sigungu)
-    for sido_cd, sido in KAPT_SIDO:
-        page = 1
+    # 1) 단지코드 열거(목록 API — 별도 쿼터, 시도당 수 콜).
+    #    분모는 전수여야 하므로 페이지 실패·totalCount 미달 = 열거 불완전 → 전체 중단(침묵 절단 금지).
+    def _list_total(obj):
+        root = obj.get("response") if isinstance(obj.get("response"), dict) else obj
+        body = root.get("body") if isinstance(root, dict) else None
+        if isinstance(body, dict):
+            try:
+                t = int(str(body.get("totalCount", "")).strip() or 0)
+                return t or None
+            except ValueError:
+                pass
+        return None
+
+    codes, seen = [], set()   # (kaptCode, sido, sigungu)
+    for sido_cd in KAPT_SIDOS:
+        sido = KAPT_SIDO_NM.get(sido_cd, sido_cd)
+        page, got, total = 1, 0, None
         while page <= 200:
-            obj = _kapt_fetch(KAPT_LIST_URL, {"serviceKey": key, "sidoCode": sido_cd,
-                                              "pageNo": page, "numOfRows": 1000})
+            obj = {}
+            for attempt in range(3):   # 페이지 단위 재시도 — 그래도 실패면 열거 불완전이므로 중단
+                obj = _kapt_fetch(KAPT_LIST_URL, {"serviceKey": key, "sidoCode": sido_cd,
+                                                  "pageNo": page, "numOfRows": 1000})
+                if obj:
+                    break
+                time.sleep(1.0 * (attempt + 1))
+            if not obj:
+                print(f"  ! KAPT 목록 {sido} p{page} 응답 실패(3회) — 열거 불완전 위험, 수집 중단", file=sys.stderr)
+                return [], {}
+            if total is None:
+                total = _list_total(obj)
             items = _kapt_items(obj)
             if not items:
                 if page == 1:
                     print(f"  ! KAPT 목록 {sido}({sido_cd}) 0건 — 응답 {str(obj)[:160]!r}", file=sys.stderr)
                 break
+            got += len(items)
             for it in items:
                 kc = _pick(it, ("kaptCode", "KAPT_CODE", "단지코드"))
-                if kc:
+                if kc and kc not in seen:
+                    seen.add(kc)
                     codes.append((kc, sido, _pick(it, ("as2", "sigungu", "시군구", "as3"))))
-            if len(items) < 1000:
+            if (total and got >= total) or len(items) < 1000:
                 break
-            page += 1; time.sleep(0.03)
+            page += 1; time.sleep(0.05)
+        if total and got < total:
+            print(f"  ! KAPT 목록 {sido} 불완전({got:,}/{total:,}) — 분모 무결성 미달, 수집 중단", file=sys.stderr)
+            return [], {}
     if not codes:
         print("  ! KAPT 단지코드 0건 — 목록 API(#15057332) 활용신청·엔드포인트 확인", file=sys.stderr)
         return [], {}
-    print(f"  · KAPT 수도권 단지코드 {len(codes):,}개 열거", file=sys.stderr)
+    sido_lbl = "+".join(KAPT_SIDO_NM.get(c, c) for c in KAPT_SIDOS)
+    print(f"  · KAPT 단지코드 {len(codes):,}개 열거 ({sido_lbl})", file=sys.stderr)
     if os.environ.get("KAPT_PROBE"):   # 진단: 기본정보 원응답 5건 덤프 후 종료
         for kc, sido, gu in codes[:5]:
             q = urlencode({"serviceKey": key, "kaptCode": kc, "_type": "json"})
@@ -709,67 +747,115 @@ def apt_stock_kapt_api(key, asof=None):
             print(f"  · PROBE {kc}: {raw[:400]!r}", file=sys.stderr)
         return [], {}
     if len(codes) > KAPT_MAX_BASIS:
-        print(f"  · 상한 {KAPT_MAX_BASIS:,} 적용(쿼터 보호) — 초과분 {len(codes)-KAPT_MAX_BASIS:,}개 미조회", file=sys.stderr)
-        codes = codes[:KAPT_MAX_BASIS]
+        # 분모는 전수여야 의미 있음 — 잘라서 과소집계하느니 중단하고 분할 실행 안내
+        print(f"  ! 단지수 {len(codes):,} > 안전상한 {KAPT_MAX_BASIS:,}(일 쿼터 보호) — 수집 중단. "
+              f"KAPT_SIDOS를 나눠 다른 날 실행하거나 운영계정(쿼터 상향)을 사용하세요.", file=sys.stderr)
+        return [], {}
 
-    # 프리플라이트: 기본정보 3건을 순차 시험. 전부 실패(429/쿼터)면 전체 수집을 조기 중단
-    #    — 수도권 아파트(약 1만 단지) > 기본정보 일 쿼터 1만이라 429가 상시 발생 가능.
-    #    doomed한 수만 콜(35분+)을 낭비하지 않도록 방어. (해결: 벌크 #15096285 사용)
+    # 프리플라이트: 기본정보 3건 순차 시험 — 전부 실패(429=쿼터/율제한)면 조기 중단.
+    # 쿼터는 KST 자정 리셋. doomed한 수천 콜을 낭비하지 않도록 방어.
     ok = 0
     for kc, _, _ in codes[:3]:
         if _kapt_items(_kapt_fetch(KAPT_BASIS_URL, {"serviceKey": key, "kaptCode": kc}, timeout=12, retries=1)):
             ok += 1
         time.sleep(0.4)
     if ok == 0:
-        print("  ! KAPT 기본정보 프리플라이트 전건 실패(429/쿼터 추정) — 수집 중단.\n"
-              "    수도권 단지수(~1.0만) > 기본정보 일 쿼터(1만). 벌크 표준데이터(#15096285,"
-              " KAPT_STD_UDDI)로 전환 권장.", file=sys.stderr)
+        print("  ! KAPT 기본정보 프리플라이트 전건 실패(429/쿼터 추정) — 수집 중단. "
+              "일 쿼터(1만)는 KST 자정 리셋 후 재시도.", file=sys.stderr)
         return [], {}
 
-    # 2) 단지별 세대수(기본정보 API) → 시군구 합산. 수천 콜이라 순차는 과도하게 느려
-    #    (재시도 폭주로 시간 폭증) → 제한 동시성(스레드풀)+짧은 타임아웃+1회 재시도로 견고·신속.
+    # 2) 단지별 세대수(기본정보) — 제한 동시성 + 429 백오프 + 서킷브레이커.
+    #    분모 무결성: 실패가 일정 비율을 넘으면(과소집계 위험) 지표를 발행하지 않는다.
+    import threading
     from concurrent.futures import ThreadPoolExecutor
+    lock = threading.Lock()
+    state = {"c429": 0, "stop": False}
+
     def _one(item):
         kc, sido, gu = item
-        obj = _kapt_fetch(KAPT_BASIS_URL, {"serviceKey": key, "kaptCode": kc}, timeout=8, retries=2)
-        items = _kapt_items(obj)
+        if state["stop"]:
+            return None
+        q = urlencode({"serviceKey": key, "kaptCode": kc, "_type": "json"})
+        obj = None
+        for attempt in range(4):
+            try:
+                raw = _http(f"{KAPT_BASIS_URL}?{q}", timeout=10, retries=1)
+            except HTTPError as e:
+                if e.code == 429:   # 율제한 — 지수 백오프 후 재시도
+                    with lock:
+                        state["c429"] += 1
+                        if state["c429"] > 60:   # 429 폭주 = 쿼터 소진 → 전체 중단
+                            state["stop"] = True
+                            return None
+                    time.sleep(1.2 * (attempt + 1)); continue
+                return None
+            except Exception:
+                return None
+            with lock:
+                state["c429"] = 0
+            txt = raw.decode("utf-8", "replace")
+            try:
+                obj = json.loads(txt)
+            except Exception:
+                try: obj = _xml_to_obj(ET.fromstring(txt))
+                except Exception: return None
+            break
+        items = _kapt_items(obj) if obj else []
         if not items:
             return None
         r = items[0]
         hh_s = _pick(r, ("kaptdaCnt", "세대수", "hshldCnt")).replace(",", "")
         try: hh = int(float(hh_s))
         except ValueError: return None
+        used = _pick(r, ("kaptUsedate", "사용승인일"))
+        m = re.search(r"(19|20)\d{2}", used or "")
+        byear = int(m.group(0)) if m else None
         gu2 = gu or _gu_of(_pick(r, ("kaptAddr", "법정동주소", "doroJuso")), sido)
-        return (sido, gu2, hh, sorted(r.keys()))
+        return (sido, gu2, hh, byear, sorted(r.keys()))
 
-    by_gu, done, fail, schema = {}, 0, 0, None
-    with ThreadPoolExecutor(max_workers=10) as ex:
+    recs, done, fail, schema = [], 0, 0, None
+    with ThreadPoolExecutor(max_workers=5) as ex:
         for res in ex.map(_one, codes):
             if res is None:
                 fail += 1; continue
-            sido, gu2, hh, keys = res
             if schema is None:
-                schema = keys
-                print(f"  · KAPT 기본정보 첫 레코드 키: {keys}", file=sys.stderr)
-            b = by_gu.setdefault((sido, gu2), {"hh": 0, "n": 0})
-            b["hh"] += hh; b["n"] += 1
-            done += 1
+                schema = res[4]
+                print(f"  · KAPT 기본정보 첫 레코드 키: {schema}", file=sys.stderr)
+            recs.append(res); done += 1
             if done % 1000 == 0:
                 print(f"  · KAPT 기본정보 {done:,}/{len(codes):,}", file=sys.stderr)
+    if state["stop"]:
+        print("  ! 429 폭주(쿼터 소진 추정)로 중단 — 부분 데이터는 발행하지 않음. KST 자정 후 재시도.", file=sys.stderr)
+        return [], {}
+    if fail > max(20, len(codes) // 50):   # 실패 >2%면 분모 과소집계 → 미발행(정직성)
+        print(f"  ! 조회실패 {fail:,}/{len(codes):,}건(>2%) — 분모 무결성 미달로 지표 미발행.", file=sys.stderr)
+        return [], {}
     if fail:
-        print(f"  · KAPT 기본정보 조회실패/결측 {fail:,}건(집계 제외)", file=sys.stderr)
+        print(f"  · KAPT 기본정보 조회실패/결측 {fail:,}건(≤2%, 집계 제외)", file=sys.stderr)
 
-    rows, by_sido = [], {}
-    for (sido, gu), b in by_gu.items():
-        s = by_sido.setdefault(sido, {"hh": 0, "n": 0})
-        s["hh"] += b["hh"]; s["n"] += b["n"]
+    # 3) 집계 — 300세대(KAPT_MIN_HH)+ 단지만. 노후(사용승인 ≤2000) 단지수도 병기.
+    by_gu, by_sido = {}, {}
+    small = 0
+    for sido, gu2, hh, byear, _keys in recs:
+        if hh < KAPT_MIN_HH:
+            small += 1; continue
+        g = by_gu.setdefault((sido, gu2), {"hh": 0, "n": 0})
+        g["hh"] += hh; g["n"] += 1
+        s = by_sido.setdefault(sido, {"hh": 0, "n": 0, "old": 0})
+        s["hh"] += hh; s["n"] += 1
+        if byear and byear <= 2000:
+            s["old"] += 1
+    rows = []
     for sido, s in by_sido.items():
         rows.append(_row("아파트 세대수", s["hh"], "세대", sido, asof,
-            f"{sido} 공동주택(아파트) {s['n']:,}개 단지·{s['hh']:,}세대(K-apt 기본정보 집계). 공공임대 비율의 분모",
-            title=f"{sido} 아파트 {s['hh']:,}세대·{s['n']:,}단지 ({asof[:7]}·K-apt)",
+            f"{sido} 아파트 {KAPT_MIN_HH}세대 이상 단지 {s['n']:,}개·{s['hh']:,}세대"
+            f"(사용승인 2000년 이전 {s['old']:,}개 단지 포함). K-apt 기본정보 전수 — "
+            f"{KAPT_MIN_HH}세대+는 의무관리대상이라 사실상 전수. 공공임대 비율의 분모(동일 기준)",
+            title=f"{sido} 아파트 {s['hh']:,}세대·{s['n']:,}단지 ({asof[:7]}·{KAPT_MIN_HH}세대+)",
             source="국토교통부 공동주택 기본정보(K-apt)", url="https://www.data.go.kr/data/15058453/openapi.do",
             confidence="공식", category="stock"))
-    print(f"[kapt-api] 분모 {len(rows)}건(시도) · 조회 {done:,}단지 · 시군구 {len(by_gu)}개", file=sys.stderr)
+    print(f"[kapt-api] 분모 {len(rows)}건(시도) · {KAPT_MIN_HH}세대+ {sum(s['n'] for s in by_sido.values()):,}단지"
+          f"(미만 제외 {small:,}) · 조회 {done:,}/{len(codes):,}", file=sys.stderr)
     return rows, {f"{k[0]}|{k[1]}": v["hh"] for k, v in by_gu.items()}
 
 
@@ -824,6 +910,12 @@ def main():
         if k in seen:
             continue
         seen.add(k); uniq.append(r)
+
+    # 수집 0건일 때 기존 산출물을 빈 배열로 덮어쓰지 않음 — 쿼터/네트워크 히컵 한 번에
+    # 직전 주의 정상 데이터(분모 등)가 사이트에서 사라지는 클로버 방지. 성공 시에만 갱신.
+    if not uniq and os.path.exists(a.out):
+        print(f"[keep] 수집 0건 — 기존 {a.out} 보존(빈 결과로 덮어쓰지 않음)", file=sys.stderr)
+        return
 
     with open(a.out, "w", encoding="utf-8") as f:
         json.dump(uniq, f, ensure_ascii=False, indent=2)

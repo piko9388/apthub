@@ -340,25 +340,40 @@ def _latest_metric(dat, metric, sido, official_only=False):
     return xs[-1], (xs[-2] if len(xs) > 1 else None)
 
 
-def synth_lease_ratio(dat):
-    """공공임대 비율(%) = 공공임대 세대수(분자) ÷ 아파트 세대수(분모) × 100, 시도별 산출.
-    분자·분모 지표가 모두 있을 때만 생성. 자체 산출값이라 신뢰도 '추정'(○).
-    분자는 현재 LH/마이홈 임대 세대수, 분모는 K-apt 전수 아파트 세대수."""
+# 비율 기준 세대수 — 수집기 KAPT_MIN_HH와 동일 env로 동기화(기본 300, 분자·분모 정합)
+RATIO_MIN_HH = int(os.environ.get("KAPT_MIN_HH", "300"))
+
+
+def synth_lease_ratio(dat, cat=None):
+    """공공임대 비율(%) — 분자·분모를 같은 기준(300세대 이상 단지)으로 맞춰 시도별 산출.
+    분모: K-apt '아파트 세대수' 지표(300세대+ 단지 합계 — 의무관리대상이라 사실상 전수).
+    분자: LH 임대 카탈로그에서 같은 기준(세대수≥300)으로 합산.
+    기준이 맞는 분자(카탈로그)가 없으면 비율을 산출하지 않는다 — 기준 불일치 비율은
+    수치가 그럴듯해도 오도라 발행 금지. 자체 산출값 → ○추정."""
     from apthub.schema import Signal
     out = []
     for sido in ("서울", "인천", "경기"):
-        num, _ = _latest_metric(dat, "공공임대 세대수", sido)
         den, _ = _latest_metric(dat, "아파트 세대수", sido)
-        if not num or not den or not den.value:
+        if not den or not den.value:
             continue
-        pct = round(num.value / den.value * 100, 2)
+        ls = [c for c in (cat or []) if c.get("tenure") == "임대" and c.get("sido") == sido
+              and (c.get("households") or 0) >= RATIO_MIN_HH]
+        if not ls:
+            continue  # 정합 분자 없음 → 미산출
+        num_val = sum(c["households"] for c in ls)
+        num_n = len(ls)
+        lh_m, _ = _latest_metric(dat, "공공임대 세대수", sido)
+        date = max(den.date or "", (lh_m.date or "") if lh_m else "") or None
+        pct = round(num_val / den.value * 100, 2)
         out.append(Signal(
-            title=f"{sido} 공공임대 비율 {pct}% (임대 {int(num.value):,} ÷ 아파트 {int(den.value):,}세대)",
-            source="APT-SIGNAL 산출(임대 세대수 ÷ K-apt 아파트 세대수)",
-            summary=f"{sido} 공공임대 {int(num.value):,}세대를 전체 아파트 {int(den.value):,}세대로 나눈 비율. "
-                    f"분자 출처·범위에 따라 값이 달라지므로 참고용(자체 산출).",
-            url="https://www.data.go.kr/data/15096285/standard.do",
-            date=max(num.date or "", den.date or "") or None,
+            title=f"{sido} 공공임대 비율 {pct}% ({RATIO_MIN_HH}세대+ 기준: 임대 {int(num_val):,} ÷ 아파트 {int(den.value):,}세대)",
+            source="APT-SIGNAL 산출(LH 임대 ÷ K-apt 아파트 세대수)",
+            summary=f"{sido} LH 노출 공공임대 {int(num_val):,}세대({num_n}개 {RATIO_MIN_HH}세대+ 단지)를 "
+                    f"같은 기준의 전체 아파트 {int(den.value):,}세대로 나눈 비율(분자·분모 모두 "
+                    f"{RATIO_MIN_HH}세대 이상 단지, 정합). 분자가 '현재 공고·모집 노출분'이라 "
+                    f"실제 재고 기준 비율의 하한값이다.",
+            url="https://www.data.go.kr/data/15058453/openapi.do",
+            date=date,
             category="policy", sido=sido, confidence="추정",
             kind="data", metric="공공임대 비율", value=pct, unit="%"))
     return out
@@ -522,7 +537,8 @@ def build():
     # 두 트랙 분리: news(기사·정성) vs data(공식 지표·정량)
     news = [s for s in sigs if getattr(s, "kind", "news") != "data"]
     dat = [s for s in sigs if getattr(s, "kind", "news") == "data"]
-    dat += synth_lease_ratio(dat)  # 공공임대 비율(임대÷아파트 세대수) 파생 지표
+    cat = load_complex()
+    dat += synth_lease_ratio(dat, cat)  # 공공임대 비율(300세대+ 기준, 임대÷아파트) 파생 지표
     reds = sum(1 for s in news if s.trigger == "red")
     yellows = sum(1 for s in news if s.trigger == "yellow")
     _dates = sorted(s.date for s in sigs if s.date and s.date <= datetime.now().strftime("%Y-%m-%d"))
@@ -535,7 +551,7 @@ def build():
         "sig": [client_signal(s) for s in news],
         "met": [client_signal(s) for s in dat],
         "regions": region_agg(news),
-        "cat": load_complex(),
+        "cat": cat,
     }
     dates = sorted(s.date for s in news if s.date)
     def _ym(d):

@@ -89,25 +89,27 @@ jobs:
             echo "LH_KEY 미설정 — LH 임대단지 수집 건너뜀"
           fi
 
-      - name: 아파트 재고 수집(공공임대 비율 분모)
+      - name: 아파트 재고 수집(공공임대 비율 분모 — 서울·인천 300세대+)
         if: success() && steps.guard.outputs.skip != '1'
         env:
-          KOSIS_KEY: ${{ secrets.KOSIS_KEY }}
           KAPT_KEY: ${{ secrets.KAPT_KEY }}
           KAPT_STD_UDDI: ${{ secrets.KAPT_STD_UDDI }}
+          KAPT_SIDOS: "11,28"   # 서울·인천 — 기본정보 일 쿼터(1만) 내 전수 가능 범위
+          KAPT_MIN_HH: "300"    # 300세대+ 단지 기준(의무관리대상=사실상 전수, 비율 분자와 정합)
         run: |
-          if [ -n "$KOSIS_KEY" ]; then
-            # 권장: KOSIS 시도별 아파트 호수(≈세대) — 쿼터벽 없음(집계 통계)
-            python3 scripts/apthub_official_apis.py --kosis-stock \
-              --out data/seed/auto-kapt-stock.json || \
-              echo "::warning::KOSIS 아파트재고 오류 — 표코드(KOSIS_APT_*) 확인(로그의 '첫 레코드' 참고)"
-          elif [ -n "$KAPT_KEY" ] && [ -n "$KAPT_STD_UDDI" ]; then
-            # 대안: 벌크 표준데이터(#15096285) — uddi 있을 때
+          # 실패/중단 시 수집기가 기존 파일을 보존(빈 결과로 덮어쓰지 않음) — 직전 주 데이터 유지.
+          if [ -n "$KAPT_KEY" ] && [ -n "$KAPT_STD_UDDI" ] && [ "$KAPT_PREFER_BULK" = "1" ]; then
+            # 명시 옵트인 시에만 벌크 표준데이터(#15096285) — 300세대+ 필터 동일 적용
             python3 scripts/apthub_official_apis.py --kapt \
               --out data/seed/auto-kapt-stock.json || \
               echo "::warning::K-apt 벌크 수집 오류 — uddi/쿼터 확인(로그 참고)"
+          elif [ -n "$KAPT_KEY" ]; then
+            # 기본: 목록+기본정보 API — 서울·인천 300세대+ 단지 전수(~수천 콜/주)
+            python3 scripts/apthub_official_apis.py --kapt-api \
+              --out data/seed/auto-kapt-stock.json || \
+              echo "::warning::K-apt API 수집 오류 — 쿼터(KST 자정 리셋)·로그의 '첫 레코드 키' 확인"
           else
-            echo "KOSIS_KEY/KAPT 벌크 미설정 — 아파트 재고(분모) 수집 건너뜀(단지별 API는 쿼터벽으로 제외)"
+            echo "KAPT_KEY 미설정 — 아파트 재고(분모) 수집 건너뜀"
           fi
 
       - name: 빌드 검증(공개판)
