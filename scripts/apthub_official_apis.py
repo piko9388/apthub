@@ -641,21 +641,28 @@ KAPT_MAX_BASIS = int(os.environ.get("KAPT_MAX_BASIS", "9000"))  # 일 쿼터(1�
 
 
 def _kapt_items(obj):
-    """공동주택 API 응답에서 item 리스트 추출. JSON은 response>body>items>item,
-    XML 폴백(_xml_to_obj)은 response 래퍼가 없을 수 있어 body를 직접도 탐색."""
+    """공동주택 API 응답에서 레코드 리스트 추출. 두 봉투 모두 지원:
+      · 목록(AptListService3):  response>body>items>item(list)
+      · 기본정보(AptBasisInfoServiceV4): response>body>item(dict 직속 — items 래퍼 없음!)
+    XML 폴백(_xml_to_obj)은 response 래퍼가 없을 수 있어 body/root 양쪽을 탐색."""
     if not isinstance(obj, dict):
         return []
     resp = obj.get("response")
-    root = resp if isinstance(resp, dict) else obj      # JSON: response 래퍼 / XML폴백: 없음
+    root = resp if isinstance(resp, dict) else obj
     body = root.get("body") if isinstance(root, dict) else None
-    items = (body.get("items") if isinstance(body, dict) else None)
-    if items is None and isinstance(root, dict):
-        items = root.get("items")
-    if isinstance(items, dict):
-        items = items.get("item")
-    if isinstance(items, dict):
-        return [items]
-    return items if isinstance(items, list) else []
+    node = None
+    for src in (body, root):
+        if not isinstance(src, dict):
+            continue
+        if src.get("items") is not None:      # 목록 봉투: items(래퍼) 우선
+            node = src["items"]; break
+        if src.get("item") is not None:       # 기본정보 봉투: item 직속
+            node = src["item"]; break
+    if isinstance(node, dict) and "item" in node:   # {"items": {"item": ...}} 형태 한 겹 더
+        node = node["item"]
+    if isinstance(node, dict):
+        return [node]                          # 단건 레코드
+    return node if isinstance(node, list) else []
 
 
 def _kapt_fetch(url, params, timeout=25, retries=None):
