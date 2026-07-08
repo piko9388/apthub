@@ -334,7 +334,7 @@ def apt_stock_kosis(key, asof=None):
     if KOSIS_APT["objL2"]:
         params["objL2"] = KOSIS_APT["objL2"]
     try:
-        raw = _http(f"{base}?{urlencode(params)}", timeout=90, retries=1).decode("utf-8", "replace")
+        raw = _http(f"{base}?{urlencode(params)}", timeout=25, retries=1).decode("utf-8", "replace")
         js = json.loads(raw)
     except Exception as e:
         print(f"  ! KOSIS 아파트재고 요청/파싱 실패: {e} (앞부분 {locals().get('raw','')[:160]!r})", file=sys.stderr)
