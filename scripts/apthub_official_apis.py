@@ -753,15 +753,32 @@ def apt_stock_kapt_api(key, asof=None):
         return [], {}
 
     # 프리플라이트: 기본정보 3건 순차 시험 — 전부 실패(429=쿼터/율제한)면 조기 중단.
-    # 쿼터는 KST 자정 리셋. doomed한 수천 콜을 낭비하지 않도록 방어.
+    # 쿼터는 KST 자정 리셋(집계 지연/롤링 창 가능). doomed한 수천 콜을 낭비하지 않도록 방어.
     ok = 0
     for kc, _, _ in codes[:3]:
-        if _kapt_items(_kapt_fetch(KAPT_BASIS_URL, {"serviceKey": key, "kaptCode": kc}, timeout=12, retries=1)):
-            ok += 1
+        q0 = urlencode({"serviceKey": key, "kaptCode": kc, "_type": "json"})
+        try:
+            raw0 = _http(f"{KAPT_BASIS_URL}?{q0}", timeout=12, retries=1).decode("utf-8", "replace")
+            try:
+                obj0 = json.loads(raw0)
+            except Exception:
+                try: obj0 = _xml_to_obj(ET.fromstring(raw0))
+                except Exception: obj0 = {}
+            if _kapt_items(obj0):
+                ok += 1
+            else:
+                print(f"  · 프리플라이트 응답(레코드 없음): {raw0[:220]!r}", file=sys.stderr)
+        except HTTPError as e:
+            body = ""
+            try: body = e.read().decode("utf-8", "replace")[:220]
+            except Exception: pass
+            print(f"  · 프리플라이트 HTTP {e.code}: {body!r}", file=sys.stderr)
+        except Exception as e:
+            print(f"  · 프리플라이트 실패: {e}", file=sys.stderr)
         time.sleep(0.4)
     if ok == 0:
-        print("  ! KAPT 기본정보 프리플라이트 전건 실패(429/쿼터 추정) — 수집 중단. "
-              "일 쿼터(1만)는 KST 자정 리셋 후 재시도.", file=sys.stderr)
+        print("  ! KAPT 기본정보 프리플라이트 전건 실패 — 수집 중단(위 진단 참고). "
+              "쿼터/차단이면 시간 경과 후 재시도.", file=sys.stderr)
         return [], {}
 
     # 2) 단지별 세대수(기본정보) — 제한 동시성 + 429 백오프 + 서킷브레이커.
