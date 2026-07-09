@@ -16,6 +16,8 @@ on:
   schedule:
     - cron: "0 21 * * 0"   # 매주 일요일 21:00 UTC = 월요일 06:00 KST
   workflow_dispatch:        # 수동 실행(테스트)용
+  push:                     # 트리거 파일 갱신으로도 실행(API 없이 git push만으로 발화)
+    paths: [".github/trigger-crawl"]
 
 permissions:
   contents: write           # 수집 결과를 main에 커밋
@@ -39,10 +41,12 @@ jobs:
           RTMS_KEY: ${{ secrets.RTMS_KEY }}
           ECOS_KEY: ${{ secrets.ECOS_KEY }}
           LH_KEY: ${{ secrets.LH_KEY }}
+          KAPT_KEY: ${{ secrets.KAPT_KEY }}
+          KOSIS_KEY: ${{ secrets.KOSIS_KEY }}
         run: |
-          if [ -z "$RTMS_KEY" ] && [ -z "$ECOS_KEY" ] && [ -z "$LH_KEY" ]; then
+          if [ -z "$RTMS_KEY" ] && [ -z "$ECOS_KEY" ] && [ -z "$LH_KEY" ] && [ -z "$KAPT_KEY" ] && [ -z "$KOSIS_KEY" ]; then
             echo "skip=1" >> "$GITHUB_OUTPUT"
-            echo "::warning::RTMS_KEY/ECOS_KEY/LH_KEY 미설정 — 자동수집 건너뜀. 레포 Secrets에 무료 키를 등록하세요."
+            echo "::warning::수집 키 미설정 — 자동수집 건너뜀. 레포 Secrets에 무료 키를 등록하세요."
           fi
 
       - name: 공식 지표 수집(최근 4개월 시계열)
@@ -87,6 +91,29 @@ jobs:
             echo "LH_KEY 미설정 — LH 임대단지 수집 건너뜀"
           fi
 
+      - name: 아파트 재고 수집(공공임대 비율 분모 — 서울·인천 300세대+)
+        if: success() && steps.guard.outputs.skip != '1'
+        env:
+          KAPT_KEY: ${{ secrets.KAPT_KEY }}
+          KAPT_STD_UDDI: ${{ secrets.KAPT_STD_UDDI }}
+          KAPT_SIDOS: "11,28"   # 서울·인천 — 기본정보 일 쿼터(1만) 내 전수 가능 범위
+          KAPT_MIN_HH: "300"    # 300세대+ 단지 기준(의무관리대상=사실상 전수, 비율 분자와 정합)
+        run: |
+          # 실패/중단 시 수집기가 기존 파일을 보존(빈 결과로 덮어쓰지 않음) — 직전 주 데이터 유지.
+          if [ -n "$KAPT_KEY" ] && [ -n "$KAPT_STD_UDDI" ] && [ "$KAPT_PREFER_BULK" = "1" ]; then
+            # 명시 옵트인 시에만 벌크 표준데이터(#15096285) — 300세대+ 필터 동일 적용
+            python3 scripts/apthub_official_apis.py --kapt \
+              --out data/seed/auto-kapt-stock.json || \
+              echo "::warning::K-apt 벌크 수집 오류 — uddi/쿼터 확인(로그 참고)"
+          elif [ -n "$KAPT_KEY" ]; then
+            # 기본: 목록+기본정보 API — 서울·인천 300세대+ 단지 전수(~수천 콜/주)
+            python3 scripts/apthub_official_apis.py --kapt-api \
+              --out data/seed/auto-kapt-stock.json || \
+              echo "::warning::K-apt API 수집 오류 — 쿼터(KST 자정 리셋)·로그의 '첫 레코드 키' 확인"
+          else
+            echo "KAPT_KEY 미설정 — 아파트 재고(분모) 수집 건너뜀"
+          fi
+
       - name: 빌드 검증(공개판)
         if: success() && steps.guard.outputs.skip != '1'
         env:
@@ -98,7 +125,11 @@ jobs:
         run: |
           git config user.name  "apthub-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/seed/auto-official-latest.json data/seed/auto-lh-lease.json data/complex/auto-lh.json 2>/dev/null || true
+          # 파일별로 add — 일부 소스만 켜져(예: LH_KEY만) 미생성 파일이 있어도
+          # 하나의 pathspec 불일치로 git add 전체가 중단되지 않도록 개별 처리.
+          for f in data/seed/auto-official-latest.json data/seed/auto-lh-lease.json data/complex/auto-lh.json data/seed/auto-kapt-stock.json; do
+            [ -f "$f" ] && git add "$f"
+          done
           if git diff --staged --quiet; then
             echo "변경 없음 — 커밋 생략"
           else

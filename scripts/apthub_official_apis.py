@@ -33,7 +33,7 @@ v2 변경점 (모두 컨테이너 오프라인 테스트로 검증)
 키는 환경변수 우선(RTMS_KEY/KOSIS_KEY/ECOS_KEY).
 주의: RTMS는 실거래(계약일 기준). 네이버 호가와 섞지 말 것. RTMS_KEY는 반드시 Decoding 키.
 """
-import argparse, calendar, json, os, ssl, sys, time
+import argparse, calendar, json, os, re, ssl, sys, time
 import statistics as st
 from urllib.parse import urlencode
 from urllib.request import urlopen, Request
@@ -45,6 +45,8 @@ RTMS_KEY  = os.environ.get("RTMS_KEY",  "여기에_RTMS_DECODING_인증키")
 KOSIS_KEY = os.environ.get("KOSIS_KEY", "여기에_KOSIS_API_KEY")
 ECOS_KEY  = os.environ.get("ECOS_KEY",  "여기에_ECOS_인증키")
 LH_KEY    = os.environ.get("LH_KEY",    "여기에_LH_인증키")   # data.go.kr #15059475 임대주택단지 조회
+KAPT_KEY  = os.environ.get("KAPT_KEY",  "여기에_공동주택표준데이터_인증키")  # data.go.kr #15096285 전국공동주택표준데이터(분모)
+KAPT_STD_UDDI = os.environ.get("KAPT_STD_UDDI", "")  # odcloud 표준데이터 리소스 uddi(포털 요청URL에서 확인)
 
 PYEONG = 3.3058                  # 1평 = 3.3058㎡
 _SSL = ssl.create_default_context()
@@ -83,11 +85,12 @@ def last_day(ym):
     y, mo = int(ym[:4]), int(ym[4:6])
     return f"{y}-{mo:02d}-{calendar.monthrange(y, mo)[1]:02d}"
 
-def _http(url):
+def _http(url, timeout=25, retries=None):
     last = None
-    for i in range(HTTP_RETRY):
+    n = HTTP_RETRY if retries is None else retries
+    for i in range(n):
         try:
-            return urlopen(Request(url, headers=HEADERS), timeout=25, context=_SSL).read()
+            return urlopen(Request(url, headers=HEADERS), timeout=timeout, context=_SSL).read()
         except (HTTPError, URLError, TimeoutError) as e:
             last = e; time.sleep(HTTP_BACKOFF * (i + 1))
     raise last
@@ -297,18 +300,101 @@ def kosis_collect(specs, key):
                 url="https://kosis.kr/openapi/", category=s.get("category","price"), **extra))
     return rows
 
+
+# ── KOSIS 아파트 재고(분모) — 시도별 아파트 호수/세대 집계 ──
+# 통계표 코드는 표별로 달라 env로 조정 가능(첫 실행 로그의 원레코드로 확정).
+# 기본값: 통계청 인구주택총조사 '주택의 종류별 주택'(연간). itm=호수, 지역=C1/C2.
+KOSIS_APT = {
+    "org": os.environ.get("KOSIS_APT_ORG", "101"),
+    "tbl": os.environ.get("KOSIS_APT_TBL", "DT_1JU1501"),
+    "itm": os.environ.get("KOSIS_APT_ITM", "T20"),      # 호수
+    "objL1": os.environ.get("KOSIS_APT_OBJL1", ""),     # 지역(비우면 전체 후 필터)
+    "objL2": os.environ.get("KOSIS_APT_OBJL2", ""),     # 주택종류(아파트) — 표에 따라
+    "prdSe": os.environ.get("KOSIS_APT_PRDSE", "Y"),
+}
+_KOSIS_SIDO = {"서울": "서울", "인천": "인천", "경기": "경기"}
+
+
+def apt_stock_kosis(key, asof=None):
+    """KOSIS 통계표에서 수도권 시도별 아파트 호수(≈세대수, 분모) 집계.
+    표 코드가 다르면 첫 실행 로그의 '원레코드'를 보고 KOSIS_APT_* env로 교정."""
+    if "여기에" in key or not key:
+        print("✗ KOSIS_KEY 미설정: kosis.kr/openapi 인증키를 KOSIS_KEY로", file=sys.stderr)
+        return [], {}
+    if not asof:
+        from datetime import date
+        asof = date.today().isoformat()
+    base = "https://kosis.kr/openapi/Param/statisticsParameterData.do"
+    params = {"method": "getList", "apiKey": key, "orgId": KOSIS_APT["org"],
+              "tblId": KOSIS_APT["tbl"], "itmId": KOSIS_APT["itm"],
+              "prdSe": KOSIS_APT["prdSe"], "startPrdDe": "2020", "endPrdDe": "2030",
+              "format": "json", "jsonVD": "Y"}
+    if KOSIS_APT["objL1"]:
+        params["objL1"] = KOSIS_APT["objL1"]
+    if KOSIS_APT["objL2"]:
+        params["objL2"] = KOSIS_APT["objL2"]
+    try:
+        raw = _http(f"{base}?{urlencode(params)}", timeout=25, retries=1).decode("utf-8", "replace")
+        js = json.loads(raw)
+    except Exception as e:
+        print(f"  ! KOSIS 아파트재고 요청/파싱 실패: {e} (앞부분 {locals().get('raw','')[:160]!r})", file=sys.stderr)
+        return [], {}
+    if isinstance(js, dict) and js.get("err"):
+        print(f"  ✗ KOSIS 오류: {js.get('errMsg', js.get('err'))} — KOSIS_APT_* 코드 확인", file=sys.stderr)
+        return [], {}
+    items = js if isinstance(js, list) else []
+    if not items:
+        print(f"  ! KOSIS 응답 0건 — 표/코드 확인. 응답: {str(js)[:200]!r}", file=sys.stderr)
+        return [], {}
+    print(f"  · KOSIS 첫 레코드: {json.dumps(items[0], ensure_ascii=False)[:300]}", file=sys.stderr)
+    def _names(it):
+        return " ".join(str(it.get(k, "")) for k in ("C1_NM", "C2_NM", "C3_NM", "ITM_NM"))
+    # 주택종류 차원이 있으면(어느 레코드든 '아파트' 언급) 아파트 레코드만 채택.
+    # 아파트-전용 표면 언급이 없어 전부 채택. → 단독/연립/다세대·합계 오채택 방지.
+    has_type = any("아파트" in _names(it) for it in items)
+    by_sido, latest = {}, {}
+    for it in items:
+        names = _names(it)
+        if has_type and "아파트" not in names:
+            continue
+        sido = next((v for k, v in _KOSIS_SIDO.items() if k in names), "")
+        if not sido:
+            continue
+        try:
+            val = float(it.get("DT", ""))
+        except (ValueError, TypeError):
+            continue
+        prd = it.get("PRD_DE", "")
+        if prd >= latest.get(sido, ""):        # 최신 기간 값 채택
+            latest[sido] = prd; by_sido[sido] = val
+    rows = []
+    for sido, val in by_sido.items():
+        rows.append(_row("아파트 세대수", int(val), "세대", sido, asof,
+            f"{sido} 아파트 {int(val):,}호(≈세대, KOSIS {KOSIS_APT['org']}/{KOSIS_APT['tbl']}). 공공임대 비율의 분모",
+            title=f"{sido} 아파트 {int(val):,}호 ({latest.get(sido,'')[:4]}·KOSIS)",
+            source=f"KOSIS {KOSIS_APT['org']}/{KOSIS_APT['tbl']}",
+            url="https://kosis.kr/openapi/", confidence="공식", category="stock"))
+    print(f"[kosis] 분모 {len(rows)}건(시도) — { {k:int(v) for k,v in by_sido.items()} }", file=sys.stderr)
+    return rows, {}
+
+
 # ──────────────────────────── main ────────────────────────────
 # ──────────────────────────── LH 임대주택단지 ────────────────────────────
 LH_URL = "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
-# 응답 필드는 LH 봉투 구조라 후보키 다중매칭(태그무관). 첫 레코드 스키마는 자동 출력해 확정.
+# 실검증된 응답 스키마(dsList 레코드): SUM_HSH_CNT 총세대수 / HSH_CNT 세대수 / ARA_NM 지역명 /
+# AIS_TP_CD_NM 공급유형명 / SBD_LGO_NM 단지명 / MVIN_XPC_YM 최초입주년월 / DDO_AR 전용면적 /
+# RFE 월임대료 / LS_GMY 임대보증금 / ALL_CNT 전체건수. 요청변수: PG_SZ, PAGE, CNP_CD(시도2자리).
+# 봉투는 [{dsSch:[...]},{dsList:[...],resHeader:[{SS_CODE:"Y"}]}]. 후보키 다중매칭으로 스키마 변동에도 견고.
 LHF = {
-    "region": ("CNP_CD_NM", "지역명", "지역", "LCTN_ARA_NM", "RGN_NM", "brmpNm", "지역본부"),
-    "rtype":  ("AIS_TP_CD_NM", "공급유형", "임대유형", "SPL_TP_CD_NM", "RNTL_KND_NM", "주택유형"),
-    "name":   ("SBD_LGO_NM", "단지명", "BSNS_NM", "LGO_NM", "complexNm", "단지"),
-    "hh":     ("SUM_HSHLDCO", "총세대수", "세대수", "HSHLDCO", "totHshldCo", "HSHLD_CNT", "TOT_HSHLD_CO"),
-    "moved":  ("MVIN_XPC_YM", "최초입주년월", "입주년월", "준공일", "MVIN_YM", "완공일"),
-    "addr":   ("LEG_ADRES", "주소", "단지주소", "도로명주소", "ADRES", "LEGADDR"),
+    "region": ("ARA_NM", "지역명", "CNP_CD_NM", "지역", "LCTN_ARA_NM"),
+    "rtype":  ("AIS_TP_CD_NM", "공급유형명", "공급유형", "임대유형", "SPL_TP_CD_NM"),
+    "name":   ("SBD_LGO_NM", "단지명", "BSNS_NM", "LGO_NM"),
+    "hh":     ("SUM_HSH_CNT", "총세대수", "HSH_CNT", "세대수", "SUM_HSHLDCO"),
+    "moved":  ("MVIN_XPC_YM", "최초입주년월", "입주년월", "MVIN_YM"),
+    "area":   ("DDO_AR", "전용면적"),
 }
+# LH lhLeaseInfo1 은 CNP_CD(시도 2자리) 필터가 사실상 필수 — 미지정 시 dsList 빈 배열.
+LH_CNP = (("11", "서울"), ("28", "인천"), ("41", "경기"))
 _SIDO_KEY = {"서울": "서울", "경기": "경기", "인천": "인천"}
 
 
@@ -359,59 +445,61 @@ def _gu_of(addr, sido):
 def lh_lease_collect(key, asof=None, complex_out=None):
     """LH 임대주택단지 조회 → 수도권 시군구별 공공임대 세대수·단지수(집계 지표)
     + 단지 카탈로그(아파트 정보 탭, tenure=임대). 오래된 주공은 built_year<=2000."""
-    import calendar as _cal
     if "여기에" in key:
         print("✗ LH_KEY 미설정: data.go.kr #15059475 활용신청 후 인증키를 LH_KEY 환경변수로", file=sys.stderr)
         return [], []
     if not asof:
         from datetime import date
-        asof = date.today().replace(day=1).isoformat()  # 스냅샷 기준(월초); 아래서 월말로
-    y, m = int(asof[:4]), int(asof[5:7])
-    asof = f"{y:04d}-{m:02d}-{_cal.monthrange(y, m)[1]:02d}"
+        asof = date.today().isoformat()  # 라이브 스냅샷 = 수집일(미래 월말 금지 → '예정' 오배지 방지)
 
-    complexes, page, seen_schema = [], 1, False
-    while page <= 60:
-        q = urlencode({"serviceKey": key, "PG_": page, "PG_SIZE": 100})
-        try:
-            raw = _http(f"{LH_URL}?{q}").decode("utf-8", "replace")
-        except Exception as e:
-            print(f"  ! LH p{page} 요청실패: {e}", file=sys.stderr); break
-        try:
-            obj = json.loads(raw)
-        except Exception:
-            try:  # XML 폴백
-                obj = _xml_to_obj(ET.fromstring(raw))
+    complexes, seen_schema, seen_key = [], False, set()
+    for cnp, sido in LH_CNP:
+        page = 1
+        while page <= 40:
+            q = urlencode({"serviceKey": key, "PG_SZ": 100, "PAGE": page, "CNP_CD": cnp})
+            try:
+                raw = _http(f"{LH_URL}?{q}").decode("utf-8", "replace")
             except Exception as e:
-                print(f"  ! LH p{page} 파싱실패: {e} (앞부분 {raw[:140]!r})", file=sys.stderr); break
-        recs = _find_records(obj)
-        if not recs:
-            if page == 1:
-                print(f"  ! LH 레코드 없음 — 응답 앞부분: {raw[:200]!r}", file=sys.stderr)
-            break
-        if not seen_schema:
-            print(f"  · LH 첫 레코드 키: {sorted(recs[0].keys())}", file=sys.stderr); seen_schema = True
-        for r in recs:
-            region = _pick(r, LHF["region"]); addr = _pick(r, LHF["addr"])
-            sido = next((v for k, v in _SIDO_KEY.items() if k in region or k in addr), "")
-            if not sido:
-                continue  # 수도권만
-            hh_s = _pick(r, LHF["hh"]).replace(",", "")
-            try: hh = int(float(hh_s))
-            except ValueError: hh = None
-            moved = _pick(r, LHF["moved"])
-            byear = None
-            mm = re.search(r"(19|20)\d{2}", moved or "")
-            if mm: byear = int(mm.group(0))
-            complexes.append({
-                "complex": _pick(r, LHF["name"]) or "(단지명미상)",
-                "sido": sido, "gu": _gu_of(addr, sido),
-                "households": hh, "built_year": byear,
-                "tenure": "임대", "rental_type": _pick(r, LHF["rtype"]),
-                "dev": ("LH 공공임대" + (" · 노후 주공" if byear and byear <= 2000 else "")),
-                "source_urls": [LH_URL],
-            })
-        if len(recs) < 100: break
-        page += 1; time.sleep(0.12)
+                print(f"  ! LH {sido} p{page} 요청실패: {e}", file=sys.stderr); break
+            try:
+                obj = json.loads(raw)
+            except Exception:
+                try:  # XML 폴백
+                    obj = _xml_to_obj(ET.fromstring(raw))
+                except Exception as e:
+                    print(f"  ! LH {sido} p{page} 파싱실패: {e} (앞부분 {raw[:140]!r})", file=sys.stderr); break
+            recs = _find_records(obj)
+            if not recs:
+                if page == 1:
+                    print(f"  ! LH {sido}(CNP_CD={cnp}) 레코드 없음 — 응답: {raw[:200]!r}", file=sys.stderr)
+                break
+            if not seen_schema:
+                print(f"  · LH 첫 레코드 키: {sorted(recs[0].keys())}", file=sys.stderr); seen_schema = True
+            for r in recs:
+                # 한 단지가 전용면적(타입)별로 여러 행 → (시도·단지명·지역명)으로 유일화, 총세대수는 단지당 1회
+                name = _pick(r, LHF["name"]) or "(단지명미상)"
+                region = _pick(r, LHF["region"])
+                dkey = (sido, name, region)
+                if dkey in seen_key:
+                    continue
+                seen_key.add(dkey)
+                hh_s = _pick(r, LHF["hh"]).replace(",", "")
+                try: hh = int(float(hh_s))
+                except ValueError: hh = None
+                moved = _pick(r, LHF["moved"])
+                byear = None
+                mm = re.search(r"(19|20)\d{2}", moved or "")
+                if mm: byear = int(mm.group(0))
+                complexes.append({
+                    "complex": name, "sido": sido, "gu": _gu_of(region, sido),
+                    "households": hh, "built_year": byear,
+                    "tenure": "임대", "rental_type": _pick(r, LHF["rtype"]) or "공공임대",
+                    "dev": ("LH 공공임대" + (" · 노후 주공" if byear and byear <= 2000 else "")),
+                    "source_urls": [LH_URL],
+                })
+            if len(recs) < 100:
+                break
+            page += 1; time.sleep(0.12)
 
     # 집계 지표(시군구/시도별 공공임대 세대수·단지수)
     rows, by = [], {}
@@ -421,12 +509,14 @@ def lh_lease_collect(key, asof=None, complex_out=None):
         if c["built_year"] and c["built_year"] <= 2000: b["old"] += 1
     for sido, b in by.items():
         rows.append(_row("공공임대 세대수", b["hh"], "세대", sido, asof,
-            f"{sido} LH 공공임대 {b['n']}개 단지·{b['hh']:,}세대(노후주공 {b['old']}단지). LH 임대주택단지 조회 집계",
-            title=f"{sido} 공공임대 {b['hh']:,}세대·{b['n']}단지 ({asof[:7]}·LH)",
+            f"{sido} LH 임대주택단지 조회 노출 {b['n']}개 단지·{b['hh']:,}세대(노후주공 {b['old']}단지). "
+            f"본 API는 현재 공고·모집 노출 단지 기준(전체 재고 아님)",
+            title=f"{sido} LH 노출임대 {b['hh']:,}세대·{b['n']}단지 ({asof[:7]})",
             source="한국토지주택공사 임대주택단지 조회", url=LH_URL, confidence="공식", category="policy"))
         rows.append(_row("공공임대 단지수", b["n"], "단지", sido, asof,
-            f"{sido} LH 공공임대 단지 {b['n']}개(노후주공 {b['old']}). 임대유형·준공 포함 카탈로그 동시 생성",
-            title=f"{sido} 공공임대 {b['n']}단지 ({asof[:7]}·LH)",
+            f"{sido} LH 노출 임대단지 {b['n']}개(노후주공 {b['old']}). 임대유형·준공·전용면적 포함 카탈로그 동시 생성. "
+            f"현재 공고·모집 기준이라 영구·국민임대 등 비노출분은 제외",
+            title=f"{sido} LH 노출임대 {b['n']}단지 ({asof[:7]})",
             source="한국토지주택공사 임대주택단지 조회", url=LH_URL, confidence="공식", category="policy"))
     if complex_out and complexes:
         with open(complex_out, "w", encoding="utf-8") as f:
@@ -452,12 +542,358 @@ def _xml_to_obj(el):
     return out
 
 
+# ──────────────────────── K-apt 아파트 재고(분모) ────────────────────────
+# 전국공동주택표준데이터(#15096285) odcloud API — 전 아파트 단지 세대수 전수.
+# 시군구별 세대수를 합산해 '아파트 세대수' 지표(분모) 생성 → 공공임대 비율의 분모.
+# 이 데이터가 호갱노노·네이버 아파트 세대수의 실제 원천(K-apt)이며 전수·무료·약관 문제 없음.
+KAPT_STD_BASE = "https://api.odcloud.kr/api/15096285/v1"
+KAPTF = {
+    "sido":   ("시도", "시도명", "sidoNm", "CTPRVN_NM", "광역시도"),
+    "sigungu":("시군구", "시군구명", "sigunguNm", "SIGNGU_NM"),
+    "hh":     ("세대수", "세대수합계", "hshldCnt", "kaptdaCnt", "HSHLD_CO", "총세대수"),
+    "name":   ("단지명", "kaptName", "공동주택명"),
+    "approve":("사용승인일", "useAprDay", "사용검사일", "준공일자"),
+}
+# odcloud 표준데이터는 시도가 '서울특별시/경기도/인천광역시' 전체표기 → 별칭 정규화 재사용
+_STD_SIDO = {"서울특별시": "서울", "서울시": "서울", "서울": "서울",
+             "인천광역시": "인천", "인천시": "인천", "인천": "인천",
+             "경기도": "경기", "경기": "경기"}
+
+
+def apt_stock_collect(key, uddi="", asof=None):
+    """전국공동주택표준데이터(#15096285)에서 수도권 시군구별 아파트 세대수(분모) 집계.
+    odcloud: {base}/uddi:{uddi}?page&perPage&serviceKey&returnType=JSON.
+    반환: 시도별 '아파트 세대수' 지표 rows + 시군구별 세대수 dict(비율 세분화용)."""
+    if "여기에" in key:
+        print("✗ KAPT_KEY 미설정: data.go.kr #15096285 활용신청 후 인증키를 KAPT_KEY로", file=sys.stderr)
+        return [], {}
+    if not uddi:
+        print("✗ KAPT_STD_UDDI 미설정: 포털 #15096285 '요청 URL'의 uddi 값을 KAPT_STD_UDDI로", file=sys.stderr)
+        return [], {}
+    if not asof:
+        from datetime import date
+        asof = date.today().isoformat()
+    url0 = f"{KAPT_STD_BASE}/uddi:{uddi}"
+    by_gu, seen_schema, page, per = {}, False, 1, 1000
+    total = None
+    while page <= 60:
+        q = urlencode({"serviceKey": key, "page": page, "perPage": per, "returnType": "JSON"})
+        try:
+            obj = json.loads(_http(f"{url0}?{q}").decode("utf-8", "replace"))
+        except Exception as e:
+            print(f"  ! KAPT p{page} 요청/파싱 실패: {e}", file=sys.stderr); break
+        recs = obj.get("data") if isinstance(obj, dict) else None
+        if not isinstance(recs, list) or not recs:
+            if page == 1:
+                print(f"  ! KAPT 레코드 없음 — 응답 앞부분: {str(obj)[:200]!r}", file=sys.stderr)
+            break
+        if not seen_schema:
+            print(f"  · KAPT 첫 레코드 키: {sorted(recs[0].keys())}", file=sys.stderr); seen_schema = True
+        if total is None:
+            total = obj.get("totalCount") or obj.get("matchCount")
+        for r in recs:
+            sido = _STD_SIDO.get(_pick(r, KAPTF["sido"]), "")
+            if not sido:
+                continue  # 수도권만
+            hh_s = _pick(r, KAPTF["hh"]).replace(",", "")
+            try: hh = int(float(hh_s))
+            except ValueError: continue
+            if hh < KAPT_MIN_HH:
+                continue  # 비율 기준(300세대+)과 정합 — 분모 기준 통일
+            gu = _pick(r, KAPTF["sigungu"])
+            b = by_gu.setdefault((sido, gu), {"hh": 0, "n": 0})
+            b["hh"] += hh; b["n"] += 1
+        got = page * per
+        if total and got >= total:
+            break
+        if len(recs) < per:
+            break
+        page += 1; time.sleep(0.1)
+
+    # 시도별 합산 → 분모 지표
+    rows, by_sido = [], {}
+    for (sido, gu), b in by_gu.items():
+        s = by_sido.setdefault(sido, {"hh": 0, "n": 0})
+        s["hh"] += b["hh"]; s["n"] += b["n"]
+    for sido, s in by_sido.items():
+        rows.append(_row("아파트 세대수", s["hh"], "세대", sido, asof,
+            f"{sido} 아파트 {KAPT_MIN_HH}세대 이상 단지 {s['n']:,}개·{s['hh']:,}세대(K-apt 표준데이터). "
+            f"공공임대 비율의 분모(동일 기준)",
+            title=f"{sido} 아파트 {s['hh']:,}세대·{s['n']:,}단지 ({asof[:7]}·{KAPT_MIN_HH}세대+)",
+            source="국토교통부 전국공동주택표준데이터(K-apt)", url="https://www.data.go.kr/data/15096285/standard.do",
+            confidence="공식", category="stock"))
+    print(f"[kapt] 분모 {len(rows)}건(시도·{KAPT_MIN_HH}세대+) · 시군구 {len(by_gu)}개 (수도권)", file=sys.stderr)
+    return rows, {f"{k[0]}|{k[1]}": v["hh"] for k, v in by_gu.items()}
+
+
+# ── 분모 경로: 국토부 공동주택 목록(#15057332)+기본정보(#15058453) API ──
+# 목록 API로 단지코드를 열거(getSidoAptList3)한 뒤 단지마다 세대수(kaptdaCnt)를 조회.
+# 세대수는 목록에 없고 기본정보에만 있어 단지당 1콜 필요.
+# ⚠️ 기본정보 일 쿼터 10,000 — 수도권 전체(10,155단지)는 초과. 기본 대상은 서울·인천만
+#   (합계 수천 단지, 쿼터 내 전수). 집계는 300세대 이상 단지 기준 — 300세대+는
+#   공동주택관리법상 의무관리대상이라 K-apt 등록이 사실상 전수여서 분모 완전성이 보장된다.
+KAPT_LIST_URL = os.environ.get("KAPT_LIST_URL", "https://apis.data.go.kr/1613000/AptListService3/getSidoAptList3")
+KAPT_BASIS_URL = os.environ.get("KAPT_BASIS_URL", "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4/getAphusBassInfoV4")
+KAPT_SIDO_NM = {"11": "서울", "28": "인천", "41": "경기"}
+KAPT_SIDOS = [c.strip() for c in os.environ.get("KAPT_SIDOS", "11,28").split(",") if c.strip()]
+KAPT_MIN_HH = int(os.environ.get("KAPT_MIN_HH", "300"))       # 집계 최소 세대수(비율 기준과 정합)
+KAPT_MAX_BASIS = int(os.environ.get("KAPT_MAX_BASIS", "9000"))  # 일 쿼터(1만) 내 안전 상한
+
+
+def _kapt_items(obj):
+    """공동주택 API 응답에서 레코드 리스트 추출. 두 봉투 모두 지원:
+      · 목록(AptListService3):  response>body>items>item(list)
+      · 기본정보(AptBasisInfoServiceV4): response>body>item(dict 직속 — items 래퍼 없음!)
+    XML 폴백(_xml_to_obj)은 response 래퍼가 없을 수 있어 body/root 양쪽을 탐색."""
+    if not isinstance(obj, dict):
+        return []
+    resp = obj.get("response")
+    root = resp if isinstance(resp, dict) else obj
+    body = root.get("body") if isinstance(root, dict) else None
+    node = None
+    for src in (body, root):
+        if not isinstance(src, dict):
+            continue
+        if src.get("items") is not None:      # 목록 봉투: items(래퍼) 우선
+            node = src["items"]; break
+        if src.get("item") is not None:       # 기본정보 봉투: item 직속
+            node = src["item"]; break
+    if isinstance(node, dict) and "item" in node:   # {"items": {"item": ...}} 형태 한 겹 더
+        node = node["item"]
+    if isinstance(node, dict):
+        return [node]                          # 단건 레코드
+    return node if isinstance(node, list) else []
+
+
+def _kapt_fetch(url, params, timeout=25, retries=None):
+    q = urlencode(dict(params, serviceKey=params.get("serviceKey", ""), _type="json"))
+    try:
+        raw = _http(f"{url}?{q}", timeout=timeout, retries=retries).decode("utf-8", "replace")
+    except Exception:
+        return {}
+    try:
+        return json.loads(raw)
+    except Exception:
+        try:
+            return _xml_to_obj(ET.fromstring(raw))
+        except Exception:
+            return {}
+
+
+def apt_stock_kapt_api(key, asof=None):
+    """국토부 공동주택 목록+기본정보 API로 시도별 아파트 세대수(분모) 집계.
+    기본 대상: 서울·인천(KAPT_SIDOS) · 집계는 세대수 KAPT_MIN_HH(300)+ 단지 기준.
+    300세대+는 의무관리대상이라 K-apt 등록이 사실상 전수 → 분모 완전성 확보.
+    반환: 시도별 '아파트 세대수' rows + 시군구별 세대수 dict."""
+    if not key or "여기에" in key:
+        print("✗ KAPT_KEY 미설정: data.go.kr #15058453/#15057332 활용신청 후 인증키를 KAPT_KEY로", file=sys.stderr)
+        return [], {}
+    if not asof:
+        from datetime import date
+        asof = date.today().isoformat()
+
+    # 1) 단지코드 열거(목록 API — 별도 쿼터, 시도당 수 콜).
+    #    분모는 전수여야 하므로 페이지 실패·totalCount 미달 = 열거 불완전 → 전체 중단(침묵 절단 금지).
+    def _list_total(obj):
+        root = obj.get("response") if isinstance(obj.get("response"), dict) else obj
+        body = root.get("body") if isinstance(root, dict) else None
+        if isinstance(body, dict):
+            try:
+                t = int(str(body.get("totalCount", "")).strip() or 0)
+                return t or None
+            except ValueError:
+                pass
+        return None
+
+    codes, seen = [], set()   # (kaptCode, sido, sigungu)
+    for sido_cd in KAPT_SIDOS:
+        sido = KAPT_SIDO_NM.get(sido_cd, sido_cd)
+        page, got, total = 1, 0, None
+        while page <= 200:
+            obj = {}
+            for attempt in range(3):   # 페이지 단위 재시도 — 그래도 실패면 열거 불완전이므로 중단
+                obj = _kapt_fetch(KAPT_LIST_URL, {"serviceKey": key, "sidoCode": sido_cd,
+                                                  "pageNo": page, "numOfRows": 1000})
+                if obj:
+                    break
+                time.sleep(1.0 * (attempt + 1))
+            if not obj:
+                print(f"  ! KAPT 목록 {sido} p{page} 응답 실패(3회) — 열거 불완전 위험, 수집 중단", file=sys.stderr)
+                return [], {}
+            if total is None:
+                total = _list_total(obj)
+            items = _kapt_items(obj)
+            if not items:
+                if page == 1:
+                    print(f"  ! KAPT 목록 {sido}({sido_cd}) 0건 — 응답 {str(obj)[:160]!r}", file=sys.stderr)
+                break
+            got += len(items)
+            for it in items:
+                kc = _pick(it, ("kaptCode", "KAPT_CODE", "단지코드"))
+                if kc and kc not in seen:
+                    seen.add(kc)
+                    codes.append((kc, sido, _pick(it, ("as2", "sigungu", "시군구", "as3"))))
+            if (total and got >= total) or len(items) < 1000:
+                break
+            page += 1; time.sleep(0.05)
+        if total and got < total:
+            print(f"  ! KAPT 목록 {sido} 불완전({got:,}/{total:,}) — 분모 무결성 미달, 수집 중단", file=sys.stderr)
+            return [], {}
+    if not codes:
+        print("  ! KAPT 단지코드 0건 — 목록 API(#15057332) 활용신청·엔드포인트 확인", file=sys.stderr)
+        return [], {}
+    sido_lbl = "+".join(KAPT_SIDO_NM.get(c, c) for c in KAPT_SIDOS)
+    print(f"  · KAPT 단지코드 {len(codes):,}개 열거 ({sido_lbl})", file=sys.stderr)
+    if os.environ.get("KAPT_PROBE"):   # 진단: 기본정보 원응답 5건 덤프 후 종료
+        for kc, sido, gu in codes[:5]:
+            q = urlencode({"serviceKey": key, "kaptCode": kc, "_type": "json"})
+            try:
+                raw = _http(f"{KAPT_BASIS_URL}?{q}", timeout=15, retries=1).decode("utf-8", "replace")
+            except Exception as e:
+                raw = f"EXC {e}"
+            print(f"  · PROBE {kc}: {raw[:400]!r}", file=sys.stderr)
+        return [], {}
+    if len(codes) > KAPT_MAX_BASIS:
+        # 분모는 전수여야 의미 있음 — 잘라서 과소집계하느니 중단하고 분할 실행 안내
+        print(f"  ! 단지수 {len(codes):,} > 안전상한 {KAPT_MAX_BASIS:,}(일 쿼터 보호) — 수집 중단. "
+              f"KAPT_SIDOS를 나눠 다른 날 실행하거나 운영계정(쿼터 상향)을 사용하세요.", file=sys.stderr)
+        return [], {}
+
+    # 프리플라이트: 기본정보 3건 순차 시험 — 전부 실패(429=쿼터/율제한)면 조기 중단.
+    # 쿼터는 KST 자정 리셋(집계 지연/롤링 창 가능). doomed한 수천 콜을 낭비하지 않도록 방어.
+    ok = 0
+    for kc, _, _ in codes[:3]:
+        q0 = urlencode({"serviceKey": key, "kaptCode": kc, "_type": "json"})
+        try:
+            raw0 = _http(f"{KAPT_BASIS_URL}?{q0}", timeout=12, retries=1).decode("utf-8", "replace")
+            try:
+                obj0 = json.loads(raw0)
+            except Exception:
+                try: obj0 = _xml_to_obj(ET.fromstring(raw0))
+                except Exception: obj0 = {}
+            if _kapt_items(obj0):
+                ok += 1
+            else:
+                print(f"  · 프리플라이트 응답(레코드 없음): {raw0[:220]!r}", file=sys.stderr)
+        except HTTPError as e:
+            body = ""
+            try: body = e.read().decode("utf-8", "replace")[:220]
+            except Exception: pass
+            print(f"  · 프리플라이트 HTTP {e.code}: {body!r}", file=sys.stderr)
+        except Exception as e:
+            print(f"  · 프리플라이트 실패: {e}", file=sys.stderr)
+        time.sleep(0.4)
+    if ok == 0:
+        print("  ! KAPT 기본정보 프리플라이트 전건 실패 — 수집 중단(위 진단 참고). "
+              "쿼터/차단이면 시간 경과 후 재시도.", file=sys.stderr)
+        return [], {}
+
+    # 2) 단지별 세대수(기본정보) — 제한 동시성 + 429 백오프 + 서킷브레이커.
+    #    분모 무결성: 실패가 일정 비율을 넘으면(과소집계 위험) 지표를 발행하지 않는다.
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    lock = threading.Lock()
+    state = {"c429": 0, "stop": False}
+
+    def _one(item):
+        kc, sido, gu = item
+        if state["stop"]:
+            return None
+        q = urlencode({"serviceKey": key, "kaptCode": kc, "_type": "json"})
+        obj = None
+        for attempt in range(4):
+            try:
+                raw = _http(f"{KAPT_BASIS_URL}?{q}", timeout=10, retries=1)
+            except HTTPError as e:
+                if e.code == 429:   # 율제한 — 지수 백오프 후 재시도
+                    with lock:
+                        state["c429"] += 1
+                        if state["c429"] > 60:   # 429 폭주 = 쿼터 소진 → 전체 중단
+                            state["stop"] = True
+                            return None
+                    time.sleep(1.2 * (attempt + 1)); continue
+                return None
+            except Exception:
+                return None
+            with lock:
+                state["c429"] = 0
+            txt = raw.decode("utf-8", "replace")
+            try:
+                obj = json.loads(txt)
+            except Exception:
+                try: obj = _xml_to_obj(ET.fromstring(txt))
+                except Exception: return None
+            break
+        items = _kapt_items(obj) if obj else []
+        if not items:
+            return None
+        r = items[0]
+        hh_s = _pick(r, ("kaptdaCnt", "세대수", "hshldCnt")).replace(",", "")
+        try: hh = int(float(hh_s))
+        except ValueError: return None
+        used = _pick(r, ("kaptUsedate", "사용승인일"))
+        m = re.search(r"(19|20)\d{2}", used or "")
+        byear = int(m.group(0)) if m else None
+        gu2 = gu or _gu_of(_pick(r, ("kaptAddr", "법정동주소", "doroJuso")), sido)
+        return (sido, gu2, hh, byear, sorted(r.keys()))
+
+    recs, done, fail, schema = [], 0, 0, None
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        for res in ex.map(_one, codes):
+            if res is None:
+                fail += 1; continue
+            if schema is None:
+                schema = res[4]
+                print(f"  · KAPT 기본정보 첫 레코드 키: {schema}", file=sys.stderr)
+            recs.append(res); done += 1
+            if done % 1000 == 0:
+                print(f"  · KAPT 기본정보 {done:,}/{len(codes):,}", file=sys.stderr)
+    if state["stop"]:
+        print("  ! 429 폭주(쿼터 소진 추정)로 중단 — 부분 데이터는 발행하지 않음. KST 자정 후 재시도.", file=sys.stderr)
+        return [], {}
+    if fail > max(20, len(codes) // 50):   # 실패 >2%면 분모 과소집계 → 미발행(정직성)
+        print(f"  ! 조회실패 {fail:,}/{len(codes):,}건(>2%) — 분모 무결성 미달로 지표 미발행.", file=sys.stderr)
+        return [], {}
+    if fail:
+        print(f"  · KAPT 기본정보 조회실패/결측 {fail:,}건(≤2%, 집계 제외)", file=sys.stderr)
+
+    # 3) 집계 — 300세대(KAPT_MIN_HH)+ 단지만. 노후(사용승인 ≤2000) 단지수도 병기.
+    by_gu, by_sido = {}, {}
+    small = 0
+    for sido, gu2, hh, byear, _keys in recs:
+        if hh < KAPT_MIN_HH:
+            small += 1; continue
+        g = by_gu.setdefault((sido, gu2), {"hh": 0, "n": 0})
+        g["hh"] += hh; g["n"] += 1
+        s = by_sido.setdefault(sido, {"hh": 0, "n": 0, "old": 0})
+        s["hh"] += hh; s["n"] += 1
+        if byear and byear <= 2000:
+            s["old"] += 1
+    rows = []
+    for sido, s in by_sido.items():
+        rows.append(_row("아파트 세대수", s["hh"], "세대", sido, asof,
+            f"{sido} 아파트 {KAPT_MIN_HH}세대 이상 단지 {s['n']:,}개·{s['hh']:,}세대"
+            f"(사용승인 2000년 이전 {s['old']:,}개 단지 포함). K-apt 기본정보 전수 — "
+            f"{KAPT_MIN_HH}세대+는 의무관리대상이라 사실상 전수. 공공임대 비율의 분모(동일 기준)",
+            title=f"{sido} 아파트 {s['hh']:,}세대·{s['n']:,}단지 ({asof[:7]}·{KAPT_MIN_HH}세대+)",
+            source="국토교통부 공동주택 기본정보(K-apt)", url="https://www.data.go.kr/data/15058453/openapi.do",
+            confidence="공식", category="stock"))
+    print(f"[kapt-api] 분모 {len(rows)}건(시도) · {KAPT_MIN_HH}세대+ {sum(s['n'] for s in by_sido.values()):,}단지"
+          f"(미만 제외 {small:,}) · 조회 {done:,}/{len(codes):,}", file=sys.stderr)
+    return rows, {f"{k[0]}|{k[1]}": v["hh"] for k, v in by_gu.items()}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rtms", action="store_true", help="RTMS 실거래 수집(주력)")
     ap.add_argument("--ecos", action="store_true", help="ECOS 거시(기준금리 등) 수집")
     ap.add_argument("--kosis", action="store_true", help="KOSIS 규모별/분양가 수집(CONFIG 필요)")
     ap.add_argument("--lh", action="store_true", help="LH 임대주택단지 조회(수도권 공공임대 현황·카탈로그)")
+    ap.add_argument("--kapt", action="store_true", help="K-apt 전국공동주택표준데이터 벌크(#15096285, uddi 필요)")
+    ap.add_argument("--kapt-api", dest="kapt_api", action="store_true",
+                    help="K-apt 공동주택 목록+기본정보 API(#15057332+#15058453)로 아파트 세대수(분모)")
+    ap.add_argument("--kosis-stock", dest="kosis_stock", action="store_true",
+                    help="KOSIS 시도별 아파트 호수(≈세대수·비율 분모, 쿼터벽 없음)")
     ap.add_argument("--per-gu", action="store_true",
                     help="sido 집계 외에 구 단위 행도 생성(region 필드)")
     ap.add_argument("--months", nargs="+", default=["202605"], help="YYYYMM 복수 가능(시계열)")
@@ -479,8 +915,17 @@ def main():
     if a.lh:
         lh_rows, _ = lh_lease_collect(LH_KEY, complex_out=a.complex_out)
         rows += lh_rows
-    if not (a.rtms or a.ecos or a.kosis or a.lh):
-        sys.exit("✗ 수집 소스 미지정: --rtms / --ecos / --kosis / --lh 중 하나 이상")
+    if a.kapt:
+        kapt_rows, _ = apt_stock_collect(KAPT_KEY, KAPT_STD_UDDI)
+        rows += kapt_rows
+    if a.kapt_api:
+        kapt_rows, _ = apt_stock_kapt_api(KAPT_KEY)
+        rows += kapt_rows
+    if a.kosis_stock:
+        ks_rows, _ = apt_stock_kosis(KOSIS_KEY)
+        rows += ks_rows
+    if not (a.rtms or a.ecos or a.kosis or a.lh or a.kapt or a.kapt_api or a.kosis_stock):
+        sys.exit("✗ 수집 소스 미지정: --rtms / --ecos / --kosis / --lh / --kapt / --kapt-api / --kosis-stock 중 하나 이상")
 
     seen, uniq = set(), []
     for r in rows:
@@ -489,6 +934,12 @@ def main():
         if k in seen:
             continue
         seen.add(k); uniq.append(r)
+
+    # 수집 0건일 때 기존 산출물을 빈 배열로 덮어쓰지 않음 — 쿼터/네트워크 히컵 한 번에
+    # 직전 주의 정상 데이터(분모 등)가 사이트에서 사라지는 클로버 방지. 성공 시에만 갱신.
+    if not uniq and os.path.exists(a.out):
+        print(f"[keep] 수집 0건 — 기존 {a.out} 보존(빈 결과로 덮어쓰지 않음)", file=sys.stderr)
+        return
 
     with open(a.out, "w", encoding="utf-8") as f:
         json.dump(uniq, f, ensure_ascii=False, indent=2)
