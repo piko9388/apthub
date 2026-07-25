@@ -758,6 +758,16 @@ TEMPLATE = r"""<!DOCTYPE html>
     border:1px dashed var(--border);border-radius:9px;color:var(--navy2);font-size:12.5px;
     font-weight:600;cursor:pointer}
   .wmore:hover{border-color:var(--navy2);background:var(--tint)}
+  /* 지표 계통(4축) */
+  .msec.axis>h3{flex-wrap:wrap}
+  .axd{font-size:11.5px;font-weight:500;color:var(--muted)}
+  .axdelta{font-size:11.5px;font-weight:600;color:var(--navy2);margin-left:auto;
+    background:var(--tint2);border-radius:6px;padding:2px 9px;font-variant-numeric:tabular-nums}
+  .axdelta .axu{color:var(--up)}.axdelta .axdn{color:var(--down)}
+  .axdelta i{font-style:normal;font-weight:500;color:var(--muted)}
+  .axgeo{margin:0 0 12px}
+  .axgeo h4{margin:0 0 7px;font-size:12px;font-weight:600;color:var(--navy2);
+    padding-left:8px;border-left:3px solid var(--border)}
   /* 동향 리포트 */
   .rep-head{margin:2px 2px 14px}
   .rep-head h2{margin:0 0 4px;font-size:20px;letter-spacing:-.4px}
@@ -1343,23 +1353,56 @@ function reconcile(sido){
     +(vol?' <span class="rec-vol">거래량 '+Math.round(vol.value).toLocaleString()+'건</span>':'')+'</div>'
     +'<div class="rec-v">'+verdict+'</div></div>';
 }
+/* 지표 계통 — 28종 나열을 4축으로 그룹화. 축별로 '전기 대비 방향'만 집계하고
+   호재/악재 해석은 하지 않는다(지표별 극성이 달라 합산하면 오독을 만든다).
+   분양가는 가격이 아니라 수급 축 — '얼마나 나오나 + 얼마에 나오나 + 안 팔린 게 얼마나'로
+   공급 서사가 완결된다. 전세가율·PIR·5분위 배율은 가격 축의 부담·구조 클러스터. */
+var AXES=[
+  {k:"money", l:"💰 자금", d:"돈줄 — 금리·대출 여력",
+   m:["기준금리","COFIX","주택담보대출 금리","가계대출 증감","스트레스DSR 가산금리"]},
+  {k:"price", l:"📈 가격", d:"값 — 지수·실거래·부담",
+   m:["주간 매매변동률","매매가격지수 변동률","KB 매매변동률","주간 전세변동률","전세가격지수 변동률",
+      "평당가","5분위 평균매매가","평형별 실거래가","5분위 배율","PIR","전세가율"]},
+  {k:"supply",l:"🏗 수급", d:"물량 — 공급·재고·임대",
+   m:["미분양","준공후 미분양","입주물량","분양가","공공임대 세대수","공공임대 단지수",
+      "아파트 세대수","공공임대 비율"]},
+  {k:"demand",l:"🔥 수요·심리", d:"기세 — 거래·경쟁·전망",
+   m:["주택 매매 거래량","아파트 매매 거래량","경매 낙찰가율","청약경쟁률","매매전망지수","매수우위지수"]}
+];
+/* 축에 속한 (지표×지역) 계열별로 최신값 vs 직전값 증감을 센다. */
+function axisDelta(mets,geos){
+  var up=0,dn=0,fl=0,n=0;
+  mets.forEach(function(m){ geos.forEach(function(g){
+    var a=series(m,g); if(!a.length) return; n++;
+    var c=a[a.length-1], p=a.length>1?a[a.length-2]:null;
+    if(!p||c.value==null||p.value==null){ fl++; return; }
+    if(c.value>p.value) up++; else if(c.value<p.value) dn++; else fl++;
+  });});
+  return {up:up,dn:dn,fl:fl,n:n};
+}
 function renderMonitor(){
   var host=document.getElementById("view-monitor");
   if(!MET.length){ host.innerHTML='<div class="lead">동향 모니터링 — 공식 지표 ↔ 뉴스 정합</div>'
     +'<div class="empty">공식 지표(부동산원·KB·한은·국토부) 수집 중입니다. 채워지면 뉴스와 정합해 실제 추세를 보여줍니다.</div>'; return; }
-  var macro=["기준금리","COFIX","주택담보대출 금리","가계대출 증감","스트레스DSR 가산금리"];
-  var price=["매매가격지수 변동률","전세가격지수 변동률","주간 매매변동률","주간 전세변동률","KB 매매변동률","5분위 평균매매가","5분위 배율","평당가","평형별 실거래가","전세가율","분양가","청약경쟁률","경매 낙찰가율","PIR","아파트 매매 거래량","주택 매매 거래량","미분양","준공후 미분양","입주물량","매수우위지수","매매전망지수","공공임대 세대수","공공임대 단지수","아파트 세대수","공공임대 비율"];
   var geos=["전국","수도권","서울","경기","인천"];
   var gc={공식:0,언론:0,추정:0}; MET.forEach(function(m){gc[m.conf||"추정"]=(gc[m.conf||"추정"]||0)+1;});
   var h='<div class="lead">동향 모니터링 — 정량 <b>지표</b>와 정성 <b>뉴스</b>를 정합해 추세 점검 · 지표 '+MET.length+'건</div>'
     +'<p class="clegend">각 타일은 값 출처 신뢰도를 표기 — <span class="mt-cf 공식">●공식</span> 정부·기관 1차('+gc.공식+') · <span class="mt-cf 언론">◐언론</span> 보도 인용('+gc.언론+') · <span class="mt-cf 추정">○추정</span> 환산·해석('+gc.추정+'). 스파크라인 X축은 실제 날짜(간격=결측).</p>';
-  // 거시
-  var mt=macro.map(function(m){return metricTile(m,"전국");}).filter(Boolean).join("");
-  if(mt) h+='<section class="msec"><h3>금리·거시</h3><div class="mgrid">'+mt+'</div></section>';
-  // 가격·거래(지역별)
-  geos.forEach(function(g){
-    var tiles=price.map(function(m){return metricTile(m,g);}).filter(Boolean).join("");
-    if(tiles) h+='<section class="msec"><h3>'+esc(g)+' 가격·거래</h3><div class="mgrid">'+tiles+'</div></section>';
+  h+='<p class="clegend">계통 — 지표를 <b>자금·가격·수급·수요심리</b> 4축으로 묶고 축별 <b>전기 대비 방향</b>을 집계한다. '
+    +'▲/▼는 값의 증감일 뿐이며 <b>호재·악재 해석은 지표마다 다르다</b>(예: 미분양 ▲는 약세, 거래량 ▲는 강세).</p>';
+  AXES.forEach(function(ax){
+    var blocks="";
+    geos.forEach(function(g){
+      var tiles=ax.m.map(function(m){return metricTile(m,g);}).filter(Boolean).join("");
+      if(tiles) blocks+='<div class="axgeo"><h4>'+esc(g)+'</h4><div class="mgrid">'+tiles+'</div></div>';
+    });
+    if(!blocks) return;
+    var d=axisDelta(ax.m,geos);
+    h+='<section class="msec axis"><h3>'+ax.l
+      +' <span class="axd">'+ax.d+'</span>'
+      +' <span class="axdelta" title="축에 속한 지표×지역 계열의 최신값 대비 직전값 증감">'
+      +'<b class="axu">▲'+d.up+'</b> <b class="axdn">▼'+d.dn+'</b> <b>→'+d.fl+'</b>'
+      +' <i>계열 '+d.n+'</i></span></h3>'+blocks+'</section>';
   });
   // 정합
   var recs=["서울","경기","인천"].map(reconcile).join("");
