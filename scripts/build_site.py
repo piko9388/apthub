@@ -24,10 +24,11 @@ ROOT = Path(__file__).resolve().parents[1]
 BUILD_DATA = ROOT / ".build_data"
 SITE = ROOT / "site"
 PUBLIC_ONLY = os.environ.get("APTHUB_PUBLIC") == "1"
-# 메뉴 레이아웃 — current(현행 7뷰) | t3 | t4 | scroll. 통폐합 3안 비교용 스위치.
-NAV_MODE = os.environ.get("APTHUB_NAV", "current")
-if NAV_MODE not in ("current", "t3", "t4", "scroll"):
-    raise SystemExit(f"APTHUB_NAV 값 오류: {NAV_MODE} (current|t3|t4|scroll)")
+# 메뉴 레이아웃 — t3(기본, 3탭) | t4(4탭). 3안 비교 결과 t3 확정, scroll·현행7뷰는 폐기.
+# t4는 단지 카탈로그가 일반 단지 중심으로 커졌을 때의 승격 경로로만 남긴다.
+NAV_MODE = os.environ.get("APTHUB_NAV", "t3")
+if NAV_MODE not in ("t3", "t4"):
+    raise SystemExit(f"APTHUB_NAV 값 오류: {NAV_MODE} (t3|t4)")
 
 shutil.rmtree(BUILD_DATA, ignore_errors=True)
 os.environ["APTHUB_DATA_DIR"] = str(BUILD_DATA)
@@ -736,7 +737,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   .empty{text-align:center;color:var(--muted);padding:40px 0}
   /* 패널(부읽남/개인) */
   .panel{display:none}.panel.on{display:block}
-  /* 상단 탭바(통폐합 레이아웃 3tab/4tab) · 앵커바(scroll) */
+  /* 상단 탭바(통폐합 레이아웃) */
   .tabbar{display:none;margin:0 0 12px}
   .tabbar.on{display:block}
   .tabrow{display:flex;gap:4px;flex-wrap:wrap;border-bottom:2px solid var(--border);padding-bottom:0}
@@ -749,17 +750,14 @@ TEMPLATE = r"""<!DOCTYPE html>
     padding:4px 12px;font-size:12px;color:var(--navy2);cursor:pointer}
   .subbtn:hover{border-color:var(--navy2)}
   .subbtn.on{background:var(--brand);color:#fff;border-color:var(--brand)}
-  .anchrow{display:flex;gap:5px;flex-wrap:wrap;position:sticky;top:0;z-index:20;
-    background:var(--bg);padding:8px 0;border-bottom:1px solid var(--border)}
-  .anchrow a{font-size:12.5px;font-weight:600;color:var(--navy2);text-decoration:none;
-    padding:4px 11px;border:1px solid var(--border);border-radius:999px;background:var(--surface)}
-  .anchrow a:hover{background:var(--tint2);color:var(--navy)}
-  .scrollh{margin:26px 2px 10px;padding-top:8px;font-size:17px;letter-spacing:-.3px;color:var(--navy);
-    border-top:2px solid var(--border);display:flex;align-items:baseline;gap:9px}
-  .scrollh:first-of-type{border-top:none;margin-top:6px}
-  .scrollh i{font-style:normal;font-size:11.5px;font-weight:500;color:var(--muted)}
-  .navmode{font-size:11px;color:var(--muted);margin:0 0 8px;padding:5px 10px;
-    background:var(--tint2);border-radius:6px;display:inline-block}
+  /* 데이터 지연 배지 · 주차 더보기 */
+  .lag{display:inline-block;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:6px;
+    background:var(--tint2);color:var(--navy2);margin-left:6px}
+  .lag.warn{color:var(--up)}   /* 지연 경고 — 적색은 토큰으로(라이트/다크 동시 적응) */
+  .wmore{display:block;width:100%;margin:10px 0 2px;padding:9px;background:var(--surface);
+    border:1px dashed var(--border);border-radius:9px;color:var(--navy2);font-size:12.5px;
+    font-weight:600;cursor:pointer}
+  .wmore:hover{border-color:var(--navy2);background:var(--tint)}
   /* 동향 리포트 */
   .rep-head{margin:2px 2px 14px}
   .rep-head h2{margin:0 0 4px;font-size:20px;letter-spacing:-.4px}
@@ -1017,13 +1015,12 @@ TEMPLATE = r"""<!DOCTYPE html>
 <script>
 var DATA = __DATA__;
 var PUBLIC = "__PUBLIC__" === "1";
-/* 메뉴 레이아웃 — current(현행 7뷰) | t3(3탭) | t4(4탭) | scroll(탭제거 단일 스크롤).
-   env APTHUB_NAV 로 빌드 시 선택. 통폐합 3안을 실데이터로 비교하기 위한 스위치. */
-var NAV = "__NAV__" || "current";
+/* 메뉴 레이아웃 — t3(기본) | t4. env APTHUB_NAV. */
+var NAV = "__NAV__" || "t3";
 var SIG = DATA.sig, REG = DATA.regions, MET = DATA.met||[], CATALOG = DATA.cat||[];
 var TODAY = DATA.today || "";
 function futBadge(d){return (d&&TODAY&&d>TODAY)?'<span class="fut" title="발표·시행 예정(현재 미래 일자)">예정</span>':'';}
-var S = {view:"report", sido:null, gu:null, cat:"", trig:null, q:"", sort:"date_desc", wcat:""};
+var S = {view:"report", sido:null, gu:null, cat:"", trig:null, q:"", sort:"date_desc", wcat:"", wall:false};
 var CAT={policy:"정책·세제",price:"시세·실거래",macro:"금리·거시",semicon:"반도체"};
 var CONF={"공식":"● 공식","언론":"◐ 언론","추정":"○ 추정"};
 function esc(s){return (s||"").replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
@@ -1036,43 +1033,34 @@ var VIEWTTL={report:"📋 종합 동향",monitor:"📊 지표 추이",bands:"�
   weekly:"🗓 주차별 변화",list:"🗂 지역 목록·지도",apt:"🏢 단지 카탈로그",
   frames:"📚 부읽남 참고",personal:"👤 개인 맞춤"};
 var NAVSETS={
-  /* 3탭 — 변화 → 근거 → 탐색 */
+  /* 3탭(기본) — 변화 → 근거 → 탐색 */
   t3:[{k:"now",l:"⚡ 이번주",v:["weekly","report"]},
       {k:"met",l:"📊 지표",v:["monitor","bands"]},
       {k:"exp",l:"🗂 지역·단지",v:["list","apt"]}],
-  /* 4탭 — 3탭에서 지역/단지를 분리 */
+  /* 4탭 — 3탭에서 지역/단지를 분리(단지 카탈로그 성장 시 승격 경로) */
   t4:[{k:"now",l:"⚡ 이번주",v:["weekly","report"]},
       {k:"met",l:"📊 지표",v:["monitor","bands"]},
       {k:"reg",l:"🗂 지역",v:["list"]},
-      {k:"cx", l:"🏢 단지",v:["apt"]}],
-  /* 탭제거 — 한 페이지 순차 스크롤 */
-  scroll:[{k:"all",l:"",v:["weekly","report","monitor","bands","list","apt"]}]
+      {k:"cx", l:"🏢 단지",v:["apt"]}]
 };
 function navset(){
-  var s=NAVSETS[NAV]; if(!s) return null;
-  s=s.map(function(g){return {k:g.k,l:g.l,v:g.v.slice()};});
+  var s=(NAVSETS[NAV]||NAVSETS.t3).map(function(g){return {k:g.k,l:g.l,v:g.v.slice()};});
   /* 개인판에서는 개인뷰를 정식 진입점으로 승격(공개판은 부재) */
-  if(!PUBLIC){ if(NAV==="scroll") s[0].v.push("personal"); else s.push({k:"me",l:"👤 나",v:["personal"]}); }
+  if(!PUBLIC) s.push({k:"me",l:"👤 나",v:["personal"]});
   return s;
 }
 function groupOf(set,view){
   for(var i=0;i<set.length;i++) if(set[i].v.indexOf(view)>=0) return set[i];
   return set[0];
 }
-var HOME=(NAV==="t3"||NAV==="t4")?"weekly":"report";
-if(NAV!=="current") S.view=HOME;
+var HOME="weekly";
+S.view=HOME;
 
 function buildTabbar(){
   var bar=document.getElementById("tabbar"), set=navset();
-  if(!set){ bar.className="tabbar"; bar.innerHTML=""; return; }
   bar.className="tabbar on";
-  if(NAV==="scroll"){
-    var a='<div class="navmode">레이아웃 샘플: scroll — 탭 제거·단일 스크롤</div><div class="anchrow">';
-    set[0].v.forEach(function(v){ a+='<a href="#sec-'+v+'">'+VIEWTTL[v]+'</a>'; });
-    bar.innerHTML=a+'</div>'; return;
-  }
   var g=groupOf(set,S.view);
-  var h='<div class="navmode">레이아웃 샘플: '+NAV+' — 상단 탭 '+set.length+'개</div><div class="tabrow">';
+  var h='<div class="tabrow">';
   set.forEach(function(x){
     h+='<button class="tabbtn '+(x.k===g.k?"on":"")+'" data-g="'+x.k+'">'+x.l+'</button>';
   });
@@ -1092,24 +1080,6 @@ function buildTabbar(){
   });
 }
 
-/* 탭제거 모드 — 모든 섹션을 순서대로 한 페이지에 노출 */
-function renderScroll(){
-  var main=document.getElementById("main"), order=navset()[0].v;
-  order.forEach(function(v){
-    var el=document.getElementById("view-"+v); if(!el) return;
-    var hd=document.getElementById("sec-"+v);
-    if(!hd){ hd=document.createElement("h2"); hd.className="scrollh"; hd.id="sec-"+v;
-      hd.innerHTML=VIEWTTL[v]+' <i>'+(v==="weekly"?"데이터 기준일 역산":v==="list"?"좌측 지역 선택 연동":"")+'</i>'; }
-    main.appendChild(hd); main.appendChild(el);
-    if(v==="list") el.style.display="block"; else el.classList.add("on");
-  });
-  var f=main.querySelector(".ftr"); if(f) main.appendChild(f);
-  document.getElementById("crumb").style.display="none";
-  renderWeekly(); renderMonitor(); renderBands(); renderApt();
-  renderRegbar(); renderList();
-  setTimeout(function(){ if(map){ map.invalidateSize(); renderMap(); } },60);
-}
-
 /* ---------- 좌측 메뉴(드릴다운) ---------- */
 function counts(){
   var bySido={서울:0,경기:0,인천:0,전국:0}, byGu={};
@@ -1127,19 +1097,7 @@ function buildSidebar(){
     +'<span class="ss-r">🔴 긴급 '+DATA.reds+'</span>'
     +(DATA.data_count?'<span class="ss-d">📊 지표 '+DATA.data_count+'</span>':'')+'</div>'
     +'<div class="ss-u" title="빌드 '+built+'">데이터 기준일 '+latest+'</div></div>';
-  /* 통폐합 레이아웃(t3/t4/scroll)에서는 '보기'가 상단 탭바로 이동 — 사이드바는 지역 전용 */
-  if(NAV==="current"){
-    h+='<div class="navsec"><div class="navttl">보기</div>';
-    h+=navrow("📋 종합 동향","__view_report",S.view==="report");
-    h+=navrow("📊 동향 모니터링","__view_monitor",S.view==="monitor");
-    h+=navrow("📐 밴드 분석","__view_bands",S.view==="bands");
-    h+=navrow("🗓 주차별 정리","__view_weekly",S.view==="weekly");
-    h+=navrow("🗂 지역별 보기","__view_list",S.view==="list");
-    h+=navrow("🏢 아파트 정보","__view_apt",S.view==="apt");
-    h+=navrow("📚 부읽남 참고","__view_frames",S.view==="frames");
-    if(!PUBLIC) h+=navrow("개인 맞춤(정훈)","__view_personal",S.view==="personal");
-    h+='</div>';
-  }
+  /* '보기'는 상단 탭바로 이동 — 사이드바는 지역 드릴다운 전용 */
   h+='<div class="navsec"><div class="navttl">지역 드릴다운</div>';
   h+=navrow('<b>전체 수도권</b>','all',!S.sido,c.bySido["서울"]+c.bySido["경기"]+c.bySido["인천"]+c.bySido["전국"]);
   ["서울","경기","인천"].forEach(function(sido){
@@ -1626,11 +1584,20 @@ function renderWeekly(){
   var g={};
   SIG.forEach(function(s){ if(!s.date)return; var k=mondayOf(s.date); (g[k]=g[k]||[]).push(s); });
   var weeks=Object.keys(g).sort().reverse();
-  var CAP=20, shown=weeks.slice(0,CAP);
+  /* 홈 시간축 — '데이터 기준일 역산'. 기본은 최신 주 집중(최신 1주 펼침 + 3주 접힘),
+     '이전 주차 더 보기'로 최근 20주 전체 확장. 오늘 기준 롤링이 아니라 데이터 최신일 기준이라
+     수집 지연이 있어도 홈이 비지 않는다. 지연은 배지로 정직하게 노출. */
+  var CAP=20, FOCUS=4;
+  var shown=weeks.slice(0,S.wall?CAP:FOCUS);
   var peak=0; weeks.forEach(function(w){ if(g[w].length>peak)peak=g[w].length; });
+  var asof=""; SIG.forEach(function(s){ if(s.date&&s.date<=TODAY&&s.date>asof) asof=s.date; });
+  var lag=(asof&&TODAY)?Math.round((Date.parse(TODAY)-Date.parse(asof))/86400000):null;
+  var lagh=asof?('<span class="lag'+(lag!=null&&lag>10?" warn":"")+'">데이터 기준일 '+esc(asof)
+    +(lag!=null?' · '+lag+'일 지연':'')+'</span>'):"";
   var cats=[["","전체"],["policy","정책·세제"],["price","시세·실거래"],["macro","금리·거시"],["semicon","반도체"]];
   var chips=cats.map(function(c){return '<button class="chip wf'+(S.wcat===c[0]?" on":"")+'" data-wcat="'+c[0]+'">'+c[1]+'</button>';}).join("");
-  var h='<div class="lead">주(월~일)별 동향 — 최신순'+(weeks.length>CAP?(" · 최근 "+CAP+"주"):"")
+  var h='<div class="lead">주(월~일)별 동향 — 데이터 기준일 역산'+lagh
+    +'<br>'+(S.wall?("최근 "+Math.min(weeks.length,CAP)+"주 전체"):("최신 "+Math.min(weeks.length,FOCUS)+"주 집중"))
     +' · 카드를 펼치면 일자별 전체'
     +' &nbsp;<span class="lgd"><span class="lr">🔴 즉시</span>=제도·금리 변경 등 즉시 영향 · <span class="ly">🟡 주목</span>=추세 점검</span></div>'
     +'<div class="wfbar">'+chips+'</div>';
@@ -1661,16 +1628,20 @@ function renderWeekly(){
       +'<details class="dd"'+(mon===shown[0]?" open":"")+'><summary>일자별 전체 ('+fa.length+'건'+(S.wcat?" · "+(CAT[S.wcat]||S.wcat):"")+')</summary>'+dd+'</details>'
       +'</section>';
   });
+  if(!S.wall && weeks.length>FOCUS)
+    h+='<button class="wmore" id="wmore">↓ 이전 주차 더 보기 — 최근 '
+      +Math.min(weeks.length,CAP)+'주 전체 ('+(Math.min(weeks.length,CAP)-FOCUS)+'주 추가)</button>';
   document.getElementById("view-weekly").innerHTML=h;
   document.querySelectorAll(".chip.wf").forEach(function(b){
     b.onclick=function(){ S.wcat=b.getAttribute("data-wcat"); renderWeekly(); };
   });
+  var wm=document.getElementById("wmore");
+  if(wm) wm.onclick=function(){ S.wall=true; renderWeekly(); a11yPass(); };
 }
 
 /* ---------- 렌더 ---------- */
 function render(){
   buildSidebar(); buildTabbar();
-  if(NAV==="scroll"){ renderScroll(); a11yPass(); return; }
   document.getElementById("view-list").style.display=S.view==="list"?"block":"none";
   document.getElementById("view-report").classList.toggle("on",S.view==="report");
   document.getElementById("view-monitor").classList.toggle("on",S.view==="monitor");
@@ -1687,13 +1658,8 @@ function render(){
     if(S.view==="monitor") renderMonitor();
     if(S.view==="bands") renderBands();
     if(S.view==="apt") renderApt();
-    if(S.view==="report"){ crumb.style.display="none"; crumb.innerHTML=""; }
-    else { crumb.style.display=""; crumb.innerHTML='<span class="cp">'
-      +(S.view==="monitor"?"📊 동향 모니터링 — 공식 지표 ↔ 뉴스 정합"
-       :S.view==="bands"?"📐 밴드 분석 — 가격대·면적대 분리"
-       :S.view==="apt"?"🏢 아파트 정보 — 단지 카탈로그"
-       :S.view==="weekly"?"🗓 주차별 정리 — 주별 동향(일자 드릴다운)"
-       :S.view==="frames"?"📚 부읽남 38강 판단 프레임":"👤 개인 맞춤(정훈) — 보조")+'</span>'; }
+    /* 뷰 제목은 상단 탭바가 이미 표시 — crumb 중복 라벨 제거(지역 컨텍스트 전용) */
+    crumb.style.display="none"; crumb.innerHTML="";
   }
   a11yPass();
 }
@@ -1741,7 +1707,7 @@ document.getElementById("backdrop").onclick=closeSide;
   try{ var sv=localStorage.getItem("apt-theme"); if(sv)apply(sv); else apply(); }catch(e){ apply(); }
   btn.onclick=function(){ var n=cur()==="dark"?"light":"dark"; apply(n); try{localStorage.setItem("apt-theme",n);}catch(e){} };
 })();
-function goHome(){ S={view:HOME,sido:null,gu:null,cat:"",trig:null,q:"",sort:"date_desc",wcat:""};
+function goHome(){ S={view:HOME,sido:null,gu:null,cat:"",trig:null,q:"",sort:"date_desc",wcat:"",wall:false};
   document.getElementById("q").value=""; var so=document.getElementById("sort"); if(so)so.value="date_desc";
   document.querySelectorAll(".chip").forEach(function(x){x.classList.remove("on");});
   var a=document.querySelector('.chip[data-cat=""]'); if(a)a.classList.add("on"); render(); closeSide(); }
