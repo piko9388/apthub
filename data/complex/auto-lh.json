@@ -3510,6 +3510,32 @@
     ]
   },
   {
+    "complex": "부천대장 A5블록 신혼희망타운 행복주택",
+    "sido": "경기",
+    "gu": "부천시",
+    "households": 314,
+    "built_year": 2027,
+    "tenure": "임대",
+    "rental_type": "행복주택",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
+    "complex": "부천대장 A6블록 신혼희망타운 행복주택",
+    "sido": "경기",
+    "gu": "부천시",
+    "households": 227,
+    "built_year": 2027,
+    "tenure": "임대",
+    "rental_type": "행복주택",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
     "complex": "부천여월 행복주택(브라운스톤여월_LH참여형 가로주택정비사업)",
     "sido": "경기",
     "gu": "부천시",
@@ -5190,7 +5216,7 @@
     "complex": "안양석수코오롱",
     "sido": "경기",
     "gu": "안양시",
-    "households": 5,
+    "households": 4,
     "built_year": 2010,
     "tenure": "임대",
     "rental_type": "공공임대",
