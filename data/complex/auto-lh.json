@@ -377,6 +377,19 @@
     ]
   },
   {
+    "complex": "서울공릉 신혼희망타운 행복주택",
+    "sido": "서울",
+    "gu": "노원구",
+    "households": 60,
+    "built_year": 2027,
+    "tenure": "임대",
+    "rental_type": "행복주택",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
     "complex": "서울공릉 행복주택",
     "sido": "서울",
     "gu": "노원구",
@@ -839,6 +852,19 @@
     "built_year": 2017,
     "tenure": "임대",
     "rental_type": "공공임대",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
+    "complex": "백운주택1구역(인천시청역 힐스테이트)",
+    "sido": "인천",
+    "gu": "남동구",
+    "households": 1,
+    "built_year": 2026,
+    "tenure": "임대",
+    "rental_type": "국민임대",
     "dev": "LH 공공임대",
     "source_urls": [
       "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
