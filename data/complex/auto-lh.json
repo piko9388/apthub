@@ -1095,7 +1095,7 @@
     "complex": "인천소래 A-4BL, 논현센트럴뷰",
     "sido": "인천",
     "gu": "남동구",
-    "households": 82,
+    "households": 79,
     "built_year": 2014,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -1472,7 +1472,7 @@
     "complex": "인천가정2 루원시티 어울림(구 LH웨스턴블루힐)",
     "sido": "인천",
     "gu": "서해구",
-    "households": 138,
+    "households": 137,
     "built_year": 2015,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -2213,7 +2213,7 @@
     "complex": "고양탄현(일산푸르지오)",
     "sido": "경기",
     "gu": "고양시",
-    "households": 12,
+    "households": 11,
     "built_year": 2026,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -3315,6 +3315,19 @@
     ]
   },
   {
+    "complex": "남양주진접2 A-4BL 신혼희망타운 행복주택",
+    "sido": "경기",
+    "gu": "남양주시",
+    "households": 193,
+    "built_year": 2028,
+    "tenure": "임대",
+    "rental_type": "행복주택",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
     "complex": "남양주진접24단지",
     "sido": "경기",
     "gu": "남양주시",
@@ -4050,6 +4063,19 @@
     "built_year": 2027,
     "tenure": "임대",
     "rental_type": "국민임대",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
+    "complex": "성남금토 A-4BL 신혼희망타운 행복주택",
+    "sido": "경기",
+    "gu": "성남시",
+    "households": 384,
+    "built_year": 2027,
+    "tenure": "임대",
+    "rental_type": "행복주택",
     "dev": "LH 공공임대",
     "source_urls": [
       "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
@@ -6490,7 +6516,7 @@
     "complex": "의정부민락2 A-1BL(브라운빌리지14단지)",
     "sido": "경기",
     "gu": "의정부시",
-    "households": 159,
+    "households": 157,
     "built_year": 2016,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -7569,7 +7595,7 @@
     "complex": "미사강변 A29블록 10년 공임리츠",
     "sido": "경기",
     "gu": "하남시",
-    "households": 875,
+    "households": 869,
     "built_year": 2017,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -7582,7 +7608,7 @@
     "complex": "미사강변도시 A12블록(분납)",
     "sido": "경기",
     "gu": "하남시",
-    "households": 20,
+    "households": 17,
     "built_year": 2015,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -7647,7 +7673,7 @@
     "complex": "하남감일 1단지(10년공임)A1블록",
     "sido": "경기",
     "gu": "하남시",
-    "households": 669,
+    "households": 660,
     "built_year": 2020,
     "tenure": "임대",
     "rental_type": "공공임대",
