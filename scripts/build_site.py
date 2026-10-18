@@ -795,6 +795,10 @@ TEMPLATE = r"""<!DOCTYPE html>
   .axgeo{margin:0 0 12px}
   .axgeo h4{margin:0 0 7px;font-size:12px;font-weight:600;color:var(--navy2);
     padding-left:8px;border-left:3px solid var(--border)}
+  /* 지표 지연 표시 — 묵은 값이 최신값처럼 읽히지 않게 */
+  .mt-stale{font-size:10.5px;font-weight:600;color:var(--up);background:var(--tint2);
+    border-radius:4px;padding:1px 5px;white-space:nowrap}
+  .mtile.stale{border-style:dashed}
   /* 동향 리포트 */
   .rep-head{margin:2px 2px 14px}
   .rep-head h2{margin:0 0 4px;font-size:20px;letter-spacing:-.4px}
@@ -1339,16 +1343,36 @@ function deltaChip(cur,prev){
 }
 var CONFMARK={"공식":"●","언론":"◐","추정":"○"};
 function confBadge(cf){cf=cf||"추정";return '<span class="mt-cf '+cf+'" title="출처 신뢰도: '+cf+'">'+CONFMARK[cf]+cf+'</span>';}
+/* 지표가 '자기 갱신주기' 대비 늦었는지 — 발표 일정을 하드코딩하지 않고
+   그 지표의 과거 관측 간격(중앙값)에서 기대 주기를 구한다. 타일에 날짜는 있지만
+   그 지표 기준으로 늦은 건지는 알 수 없어, 묵은 값이 최신값처럼 읽혔다.
+   판정 기준은 scripts/healthcheck.py 와 같다(주기 2배 초과 & 21일 초과). */
+function staleInfo(a){
+  if(!TODAY || a.length<3) return null;
+  var ds=a.map(function(x){return x.date;}).filter(function(d){return d&&d<=TODAY;}).sort();
+  if(ds.length<3) return null;
+  var gaps=[];
+  for(var i=1;i<ds.length;i++) gaps.push((Date.parse(ds[i])-Date.parse(ds[i-1]))/86400000);
+  gaps.sort(function(x,y){return x-y;});
+  var mid=Math.floor(gaps.length/2);
+  var cad=gaps.length%2?gaps[mid]:(gaps[mid-1]+gaps[mid])/2;
+  if(!(cad>0)) return null;
+  var age=Math.round((Date.parse(TODAY)-Date.parse(ds[ds.length-1]))/86400000);
+  return (age>2*cad && age>21) ? {age:age, cad:Math.round(cad)} : null;
+}
 function metricTile(metric,sido){
   var a=series(metric,sido); if(!a.length)return "";
   var cur=a[a.length-1], prev=a.length>1?a[a.length-2]:null;
   var spk=sparkline(a);
   var rangeLbl=a.length>1?('<span class="mt-rg">'+ymLabel(a[0].date)+'→'+ymLabel(cur.date)+'</span>'):'';
-  return '<div class="mtile"><div class="mt-h"><span class="mt-n">'+esc(metric)+'</span>'
+  var st=staleInfo(a);
+  var stale=st?('<span class="mt-stale" title="이 지표는 평소 약 '+st.cad+'일마다 갱신됐는데 '
+    +st.age+'일째 새 값이 없습니다. 아래 값은 최신이 아닐 수 있습니다.">지연 '+st.age+'일</span>'):'';
+  return '<div class="mtile'+(st?" stale":"")+'"><div class="mt-h"><span class="mt-n">'+esc(metric)+'</span>'
     +'<span style="display:inline-flex;align-items:baseline;gap:6px">'+deltaChip(cur,prev)
     +'<a class="mt-v" href="'+safeUrl(cur.url)+'" target="_blank" rel="noopener" title="'+esc(cur.source||"")+'">'+fmtV(cur)+'</a></span></div>'
     +(spk||'')
-    +'<div class="mt-d">'+confBadge(cur.conf)+' '+(futBadge(cur.date)||'최신')+' '+esc(cur.date||"")+' · '+esc(cur.source||"")+' '+rangeLbl+'</div></div>';
+    +'<div class="mt-d">'+confBadge(cur.conf)+' '+stale+' '+(futBadge(cur.date)||'최신')+' '+esc(cur.date||"")+' · '+esc(cur.source||"")+' '+rangeLbl+'</div></div>';
 }
 function newsLean(sido){
   var ns=SIG.filter(function(s){return s.sido===sido;});

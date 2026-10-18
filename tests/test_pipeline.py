@@ -305,3 +305,66 @@ def test_normalize_keeps_existing_guards():
                     value=420.0, unit="p", sido="서울", date="2026-05-31")
     bs.normalize_signals([half, bogus, oor])
     assert half.kind == "news" and bogus.kind == "news" and oor.kind == "news"
+
+
+# --- healthcheck: 지표별 지연 감지 ------------------------------------------
+# 트랙 단위 점검만으로는 자동수집 3종이 최신이라 트랙 전체가 초록으로 보였고,
+# 수동 큐레이션 22종이 110~200일 멈춘 것을 가렸다. 지표별 판정을 회귀로 고정한다.
+
+def _healthcheck():
+    import importlib.util
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("hc", root / "scripts" / "healthcheck.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class _Row:
+    def __init__(self, metric, date):
+        self.metric, self.date, self.kind = metric, date, "data"
+
+
+def test_metric_staleness_flags_overdue_metric():
+    """자체 관측주기(중앙값)의 배수를 넘기면 지연으로 잡는다."""
+    import datetime
+    hc = _healthcheck()
+    today = datetime.date(2026, 10, 18)
+    # 월간(약 31일)으로 갱신되다 140일째 멈춘 지표
+    rows = [_Row("미분양", d) for d in
+            ("2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30", "2026-05-31")]
+    out = hc.metric_staleness(rows, today, factor=2.0, floor=21)
+    assert [o["metric"] for o in out] == ["미분양"]
+    assert out[0]["cadence"] == 30 or 28 <= out[0]["cadence"] <= 31
+    assert out[0]["age"] == 140
+
+
+def test_metric_staleness_ignores_fresh_and_unknown_cadence():
+    """정상 갱신 중인 지표와, 주기를 추정할 근거(관측 3개)가 없는 지표는 조용하다."""
+    import datetime
+    hc = _healthcheck()
+    today = datetime.date(2026, 10, 18)
+    fresh = [_Row("기준금리", d) for d in ("2026-08-18", "2026-09-17", "2026-10-16")]
+    sparse = [_Row("아파트 세대수", d) for d in ("2026-10-05", "2026-10-12")]
+    assert hc.metric_staleness(fresh + sparse, today, 2.0, 21) == []
+
+
+def test_metric_staleness_floor_suppresses_short_cadence_noise():
+    """주 단위 지표가 며칠 늦었다고 경고하지 않는다(최소 유예일)."""
+    import datetime
+    hc = _healthcheck()
+    today = datetime.date(2026, 10, 18)
+    weekly = [_Row("주간 매매변동률", d) for d in
+              ("2026-09-28", "2026-10-05", "2026-10-12")]  # 주기 7일, 경과 6일
+    assert hc.metric_staleness(weekly, today, 2.0, 21) == []
+
+
+def test_metric_staleness_skips_future_dates():
+    """미래 일자(예정 공시)는 '갱신'으로 치지 않는다."""
+    import datetime
+    hc = _healthcheck()
+    today = datetime.date(2026, 10, 18)
+    rows = [_Row("입주물량", d) for d in
+            ("2026-03-31", "2026-04-30", "2026-05-31", "2026-12-31")]
+    out = hc.metric_staleness(rows, today, 2.0, 21)
+    assert out and out[0]["latest"] == "2026-05-31", "미래 일자가 최신으로 잡히면 안 된다"
