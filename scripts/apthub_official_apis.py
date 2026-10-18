@@ -883,6 +883,17 @@ def apt_stock_kapt_api(key, asof=None):
     return rows, {f"{k[0]}|{k[1]}": v["hh"] for k, v in by_gu.items()}
 
 
+def _require_key(name: str, value: str, how: str) -> None:
+    """키 미설정을 조기에 끊는다.
+
+    키 상수는 os.environ.get(..., "여기에_...") 형태라 미설정이어도 문자열이 들어간다.
+    그대로 두면 플레이스홀더로 API를 호출해 '인증 실패'처럼 보이는 혼란스러운 오류가
+    난다(실제로 --rtms 외 6개 경로가 그랬다). 호출 전에 끊고 무엇을 넣어야 하는지 알린다.
+    """
+    if not value or "여기에" in value:
+        sys.exit(f"✗ {name} 미설정 — {how}를 환경변수 {name} 로 주세요(레포 Secrets 권장).")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rtms", action="store_true", help="RTMS 실거래 수집(주력)")
@@ -905,23 +916,29 @@ def main():
 
     rows = []
     if a.rtms:
-        if "여기에" in RTMS_KEY:
-            sys.exit("✗ RTMS_KEY 미설정: data.go.kr #1613000 활용신청 후 Decoding 인증키 입력")
+        _require_key("RTMS_KEY", RTMS_KEY, "data.go.kr #1613000 활용신청 후 Decoding 인증키")
         rows += rtms_to_apthub(a.months, RTMS_KEY, a.complex_path, per_gu=a.per_gu)
     if a.ecos:
+        _require_key("ECOS_KEY", ECOS_KEY, "ecos.bok.or.kr Open API 인증키")
         rows += ecos_collect(ECOS_SPECS, ECOS_KEY)
     if a.kosis:
+        _require_key("KOSIS_KEY", KOSIS_KEY, "kosis.kr 공유서비스 인증키")
         rows += kosis_collect(KOSIS_SPECS, KOSIS_KEY)
     if a.lh:
+        _require_key("LH_KEY", LH_KEY, "data.go.kr #15059475 임대주택단지 조회 인증키")
         lh_rows, _ = lh_lease_collect(LH_KEY, complex_out=a.complex_out)
         rows += lh_rows
     if a.kapt:
+        _require_key("KAPT_KEY", KAPT_KEY, "data.go.kr #15096285 전국공동주택표준데이터 인증키")
+        _require_key("KAPT_STD_UDDI", KAPT_STD_UDDI, "표준데이터 요청 URL의 uddi 값")
         kapt_rows, _ = apt_stock_collect(KAPT_KEY, KAPT_STD_UDDI)
         rows += kapt_rows
     if a.kapt_api:
+        _require_key("KAPT_KEY", KAPT_KEY, "data.go.kr #15057332+#15058453 K-apt 인증키")
         kapt_rows, _ = apt_stock_kapt_api(KAPT_KEY)
         rows += kapt_rows
     if a.kosis_stock:
+        _require_key("KOSIS_KEY", KOSIS_KEY, "kosis.kr 공유서비스 인증키")
         ks_rows, _ = apt_stock_kosis(KOSIS_KEY)
         rows += ks_rows
     if not (a.rtms or a.ecos or a.kosis or a.lh or a.kapt or a.kapt_api or a.kosis_stock):
