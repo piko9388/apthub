@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "data/seed/**"
+      - "data/complex/**"      # 단지 카탈로그(LH 임대단지 등) — 이것만 바뀌어도 재배포
       - "scripts/build_site.py"
       - "src/**"
       - "config/**"

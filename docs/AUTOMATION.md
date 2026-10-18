@@ -70,4 +70,21 @@ GitHub 레포 → **Settings → Secrets and variables → Actions → New repos
 KOSIS(분양가·규모별)도 `--kosis` 로 확장 가능하나, 통계표 ID 설정(`KOSIS_SPECS`)이
 필요해 기본 비활성 상태다. 필요 시 KOSIS_KEY 등록 후 specs를 채우면 된다.
 
+## 신선도 점검 — 수집이 조용히 멈추는 것 막기
+자동화된 트랙만 살아남는다. 실측 사례: 지표는 주간 자동수집으로 **6일 지연**을 유지했는데,
+수동 큐레이션인 뉴스는 **107일** 멈춰 있었고 CI는 아무 말도 하지 않았다.
+
+- `scripts/healthcheck.py` 가 트랙별 최신일과 지연 일수를 점검한다.
+  - `python3 scripts/healthcheck.py` — 임계 초과 시 **exit 1**(로컬·수동 점검)
+  - `python3 scripts/healthcheck.py --github` — `::warning::` 로 알리고 항상 exit 0(CI)
+  - 임계 기본 **14일** — 주간 수집(7일) 기준 2주 연속 실패를 잡는다.
+- 주간 워크플로가 커밋 직전에 이 점검을 실행한다. 수집 자체는 성공했을 수 있으므로
+  **실패시키지 않고 경고만** 남긴다.
+- 대시보드도 홈에 **지연 배지**를 띄운다(10일 초과 시 경고색). 늦었다는 사실을 숨기지 않는다.
+
+## 배포 트리거
+`pages.yml` 은 `data/seed/**`, **`data/complex/**`**, `scripts/build_site.py`, `src/**`,
+`config/**` 변경 시 재배포한다. 단지 카탈로그(`data/complex/auto-lh.json`)만 갱신돼도
+반영되도록 포함돼 있다.
+
 수동 챗 수집에 쓰는 프롬프트는 `docs/prompts/current-crawl-prompts.md` 참조.

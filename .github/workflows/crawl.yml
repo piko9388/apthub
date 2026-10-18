@@ -120,6 +120,14 @@ jobs:
           APTHUB_PUBLIC: "1"
         run: python3 scripts/build_site.py
 
+      - name: 데이터 신선도 점검(수집 중단 감지)
+        if: success() && steps.guard.outputs.skip != '1'
+        run: |
+          # 트랙이 조용히 멈추는 것을 잡는다 — 실측 사례: 지표는 자동수집으로 6일
+          # 지연을 유지했는데 수동 큐레이션인 뉴스는 107일 멈춰 있었고 CI는 조용했다.
+          # 경고만 남기고 실패시키지 않는다(수집 자체는 성공했을 수 있으므로).
+          python3 scripts/healthcheck.py --github
+
       - name: 변경분 커밋(있을 때만)
         if: success() && steps.guard.outputs.skip != '1'
         run: |

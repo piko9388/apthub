@@ -213,3 +213,95 @@ def test_region_detection_prefers_subject():
 
     sido, regions = filters.detect_regions("동작구 흑석·노량진, 동작 대장 입지 경쟁 부각")
     assert sido == "서울" and regions[0] == "동작구"
+
+
+# --- normalize_signals (scripts/build_site.py) -------------------------------
+# 데이터 정합성의 핵심인데 커버리지가 0이었다. 전수 점검에서 드러난 오염
+# (1분위 혼입·개별 주택형 혼입·단위 표기 불일치)을 회귀로 고정한다.
+
+def _build_site():
+    import importlib.util
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("bs", root / "scripts" / "build_site.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _data_sig(**kw):
+    kw.setdefault("source", "KB")
+    kw.setdefault("url", "https://kbland.kr/x")
+    kw.setdefault("summary", "")
+    s = Signal(**{k: v for k, v in kw.items()
+                  if k in ("title", "summary", "source", "url")})
+    s.kind = "data"
+    for f in ("metric", "value", "unit", "sido", "date"):
+        if f in kw:
+            setattr(s, f, kw[f])
+    return s
+
+
+def test_normalize_blocks_quintile1_in_quintile5_metric():
+    """'5분위 평균매매가'에 1분위(하위 20%) 수치가 섞이면 시계열이 톱니가 된다.
+
+    실측: 서울이 34.38 → 4.99 → 34.66 → 5.01 → 34.71 로 스파크라인이 거짓이었다.
+    """
+    bs = _build_site()
+    pure1 = _data_sig(title="서울 아파트 1분위 평균 매매가 4.99억 (2025-12·KB)",
+                      metric="5분위 평균매매가", value=4.99, unit="억",
+                      sido="서울", date="2025-12-31")
+    both = _data_sig(title="서울 아파트 5분위 평균 34.38억·1분위 4.99억 (2025-12·KB)",
+                     metric="5분위 평균매매가", value=34.38, unit="억",
+                     sido="서울", date="2025-12-31")
+    bs.normalize_signals([pure1, both])
+    assert pure1.kind == "news", "1분위 단독 수치는 지표에서 빠져야 한다"
+    assert both.kind == "data", "5분위 값을 실은 기사는 유지돼야 한다"
+
+
+def test_normalize_blocks_single_unit_subscription_rate():
+    """청약경쟁률은 지역 1순위 평균만 지표. 개별 주택형은 뉴스로.
+
+    실측: 서울 최신값이 '오티에르반포 59㎡B 1,180.9대1'로 잡혀 지역 평균처럼 보였다.
+    요약에 '1순위'가 들어 있어 txt 검사만으로는 걸러지지 않으므로 제목의 ㎡로 판별한다.
+    """
+    bs = _build_site()
+    one = _data_sig(title="서울 오티에르반포 59㎡B 청약 1,180.9대1 (2026-06·청약Home)",
+                    summary="서초 잠원동 전용 59㎡B 1순위 청약경쟁률 1,180.87대1",
+                    metric="청약경쟁률", value=1180.87, unit="대1",
+                    sido="서울", date="2026-06-11")
+    avg = _data_sig(title="서울 아파트 1순위 청약경쟁률 153대1 (2026-05)",
+                    metric="청약경쟁률", value=153.0, unit="대1",
+                    sido="서울", date="2026-05-31")
+    bs.normalize_signals([one, avg])
+    assert one.kind == "news", "개별 주택형 경쟁률은 지표에서 빠져야 한다"
+    assert avg.kind == "data", "지역 1순위 평균은 유지돼야 한다"
+
+
+def test_normalize_unifies_units():
+    """같은 지표에 '대 1'/'대1', '억'/'억원', ''/'p'/'지수'가 섞여 라벨이 들쭉날쭉했다."""
+    bs = _build_site()
+    sigs = [
+        _data_sig(title="서울 아파트 1순위 청약경쟁률 153대 1", metric="청약경쟁률",
+                  value=153.0, unit="대 1", sido="서울", date="2026-06-19"),
+        _data_sig(title="전국 아파트 5분위 평균매매가 15.45억원", metric="5분위 평균매매가",
+                  value=15.45, unit="억원", sido="전국", date="2026-05-31"),
+        _data_sig(title="서울 매매전망지수 135.6", metric="매매전망지수",
+                  value=135.6, unit="지수", sido="서울", date="2026-06-15"),
+        _data_sig(title="서울 매수우위지수 46", metric="매수우위지수",
+                  value=46.0, unit="", sido="서울", date="2026-06-01"),
+    ]
+    bs.normalize_signals(sigs)
+    assert [s.unit for s in sigs] == ["대1", "억", "p", "p"]
+
+
+def test_normalize_keeps_existing_guards():
+    """기존 가드(입주물량 반기 강등·분양가 단위 이상치·매수우위지수 범위)가 유지되는지."""
+    bs = _build_site()
+    half = _data_sig(title="서울 입주물량 상반기 6,145호", metric="입주물량",
+                     value=6145, unit="가구", sido="서울", date="2026-06-30")
+    bogus = _data_sig(title="분양가 9,500만원", metric="분양가",
+                      value=9500, unit="만원", sido="서울", date="2026-05-31")
+    oor = _data_sig(title="매수우위지수 420", metric="매수우위지수",
+                    value=420.0, unit="p", sido="서울", date="2026-05-31")
+    bs.normalize_signals([half, bogus, oor])
+    assert half.kind == "news" and bogus.kind == "news" and oor.kind == "news"
