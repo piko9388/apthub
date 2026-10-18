@@ -29,7 +29,7 @@
     "complex": "서울강남 A5BL(10년,분납)",
     "sido": "서울",
     "gu": "강남구",
-    "households": 34,
+    "households": 33,
     "built_year": null,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -176,6 +176,19 @@
     "built_year": 2023,
     "tenure": "임대",
     "rental_type": "행복주택",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
+    "complex": "강서염창(가로주택)",
+    "sido": "서울",
+    "gu": "강서구",
+    "households": 14,
+    "built_year": 2027,
+    "tenure": "임대",
+    "rental_type": "통합공공임대",
     "dev": "LH 공공임대",
     "source_urls": [
       "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
@@ -377,6 +390,19 @@
     ]
   },
   {
+    "complex": "서울공릉 신혼희망타운 행복주택",
+    "sido": "서울",
+    "gu": "노원구",
+    "households": 60,
+    "built_year": 2027,
+    "tenure": "임대",
+    "rental_type": "행복주택",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
     "complex": "서울공릉 행복주택",
     "sido": "서울",
     "gu": "노원구",
@@ -419,7 +445,7 @@
     "complex": "서울중계3",
     "sido": "서울",
     "gu": "노원구",
-    "households": 1455,
+    "households": 1325,
     "built_year": 1991,
     "tenure": "임대",
     "rental_type": "영구임대",
@@ -663,6 +689,19 @@
     ]
   },
   {
+    "complex": "인천검단 AA19블록 국민·영구임대주택",
+    "sido": "인천",
+    "gu": "검단구",
+    "households": 991,
+    "built_year": 2027,
+    "tenure": "임대",
+    "rental_type": "국민임대",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
     "complex": "인천검단13단지(AA-5블록) 국민·영구임대주택",
     "sido": "인천",
     "gu": "검단구",
@@ -839,6 +878,19 @@
     "built_year": 2017,
     "tenure": "임대",
     "rental_type": "공공임대",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
+    "complex": "백운주택1구역(인천시청역 힐스테이트)",
+    "sido": "인천",
+    "gu": "남동구",
+    "households": 1,
+    "built_year": 2026,
+    "tenure": "임대",
+    "rental_type": "국민임대",
     "dev": "LH 공공임대",
     "source_urls": [
       "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
@@ -1069,7 +1121,7 @@
     "complex": "인천소래 A-4BL, 논현센트럴뷰",
     "sido": "인천",
     "gu": "남동구",
-    "households": 82,
+    "households": 75,
     "built_year": 2014,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -1378,7 +1430,7 @@
     ]
   },
   {
-    "complex": "청천2구역 재개발 국민주택규모 주택(행복)",
+    "complex": "청천2구역 e편한세상 그랑힐스 행복주택",
     "sido": "인천",
     "gu": "부평구",
     "households": 55,
@@ -1446,7 +1498,7 @@
     "complex": "인천가정2 루원시티 어울림(구 LH웨스턴블루힐)",
     "sido": "인천",
     "gu": "서해구",
-    "households": 138,
+    "households": 132,
     "built_year": 2015,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -1463,6 +1515,19 @@
     "built_year": 2012,
     "tenure": "임대",
     "rental_type": "국민임대",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
+    "complex": "인천석남 어울림센터 행복주택",
+    "sido": "인천",
+    "gu": "서해구",
+    "households": 110,
+    "built_year": 2028,
+    "tenure": "임대",
+    "rental_type": "행복주택",
     "dev": "LH 공공임대",
     "source_urls": [
       "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
@@ -2187,7 +2252,7 @@
     "complex": "고양탄현(일산푸르지오)",
     "sido": "경기",
     "gu": "고양시",
-    "households": 12,
+    "households": 11,
     "built_year": 2026,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -2382,7 +2447,7 @@
     "complex": "광명철산도덕파크(공임)",
     "sido": "경기",
     "gu": "광명시",
-    "households": 28,
+    "households": 27,
     "built_year": 2001,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -2473,7 +2538,7 @@
     "complex": "군포당동2 A-3",
     "sido": "경기",
     "gu": "군포시",
-    "households": 14,
+    "households": 10,
     "built_year": 2014,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -2486,7 +2551,7 @@
     "complex": "군포당동2 S-1",
     "sido": "경기",
     "gu": "군포시",
-    "households": 13,
+    "households": 11,
     "built_year": 2014,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -2516,19 +2581,6 @@
     "built_year": 2010,
     "tenure": "임대",
     "rental_type": "국민임대",
-    "dev": "LH 공공임대",
-    "source_urls": [
-      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
-    ]
-  },
-  {
-    "complex": "군포산본삼성(재건축)",
-    "sido": "경기",
-    "gu": "군포시",
-    "households": 1,
-    "built_year": 2010,
-    "tenure": "임대",
-    "rental_type": "공공임대",
     "dev": "LH 공공임대",
     "source_urls": [
       "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
@@ -3289,6 +3341,19 @@
     ]
   },
   {
+    "complex": "남양주진접2 A-4BL 신혼희망타운 행복주택",
+    "sido": "경기",
+    "gu": "남양주시",
+    "households": 193,
+    "built_year": 2028,
+    "tenure": "임대",
+    "rental_type": "행복주택",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
     "complex": "남양주진접24단지",
     "sido": "경기",
     "gu": "남양주시",
@@ -3504,6 +3569,32 @@
     "built_year": 2017,
     "tenure": "임대",
     "rental_type": "공공임대",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
+    "complex": "부천대장 A5블록 신혼희망타운 행복주택",
+    "sido": "경기",
+    "gu": "부천시",
+    "households": 314,
+    "built_year": 2027,
+    "tenure": "임대",
+    "rental_type": "행복주택",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
+    "complex": "부천대장 A6블록 신혼희망타운 행복주택",
+    "sido": "경기",
+    "gu": "부천시",
+    "households": 227,
+    "built_year": 2027,
+    "tenure": "임대",
+    "rental_type": "행복주택",
     "dev": "LH 공공임대",
     "source_urls": [
       "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
@@ -4004,6 +4095,19 @@
     ]
   },
   {
+    "complex": "성남금토 A-4BL 신혼희망타운 행복주택",
+    "sido": "경기",
+    "gu": "성남시",
+    "households": 384,
+    "built_year": 2027,
+    "tenure": "임대",
+    "rental_type": "행복주택",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
     "complex": "성남단대",
     "sido": "경기",
     "gu": "성남시",
@@ -4384,7 +4488,7 @@
     "complex": "수원호매실13(분납)",
     "sido": "경기",
     "gu": "수원시",
-    "households": 22,
+    "households": 4,
     "built_year": 2015,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -4722,7 +4826,7 @@
     "complex": "시흥목감11단지(A3 10년공임리츠)",
     "sido": "경기",
     "gu": "시흥시",
-    "households": 407,
+    "households": 406,
     "built_year": 2017,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -4735,7 +4839,7 @@
     "complex": "시흥목감12단지(A4 10년공임리츠)",
     "sido": "경기",
     "gu": "시흥시",
-    "households": 225,
+    "households": 224,
     "built_year": 2017,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -4917,7 +5021,7 @@
     "complex": "시흥장현26단지(B1 10년공임리츠)",
     "sido": "경기",
     "gu": "시흥시",
-    "households": 499,
+    "households": 482,
     "built_year": 2019,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -5190,7 +5294,7 @@
     "complex": "안양석수코오롱",
     "sido": "경기",
     "gu": "안양시",
-    "households": 5,
+    "households": 2,
     "built_year": 2010,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -5411,7 +5515,7 @@
     "complex": "양주옥정13",
     "sido": "경기",
     "gu": "양주시",
-    "households": 70,
+    "households": 69,
     "built_year": 2026,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -5619,7 +5723,7 @@
     "complex": "오산세교 12단지(B-4블럭 서희스타힐스)",
     "sido": "경기",
     "gu": "오산시",
-    "households": 19,
+    "households": 18,
     "built_year": 2011,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -5647,19 +5751,6 @@
     "gu": "오산시",
     "households": 274,
     "built_year": 2017,
-    "tenure": "임대",
-    "rental_type": "공공임대",
-    "dev": "LH 공공임대",
-    "source_urls": [
-      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
-    ]
-  },
-  {
-    "complex": "오산세교 2단지(A-1블럭 에듀파크)",
-    "sido": "경기",
-    "gu": "오산시",
-    "households": 1,
-    "built_year": 2010,
     "tenure": "임대",
     "rental_type": "공공임대",
     "dev": "LH 공공임대",
@@ -5697,7 +5788,7 @@
     "complex": "오산세교 5단지(B-2블럭 센트럴파크)",
     "sido": "경기",
     "gu": "오산시",
-    "households": 8,
+    "households": 5,
     "built_year": 2009,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -6227,6 +6318,19 @@
     ]
   },
   {
+    "complex": "의왕청계2 A1BL 신혼희망타운 행복주택",
+    "sido": "경기",
+    "gu": "의왕시",
+    "households": 160,
+    "built_year": 2028,
+    "tenure": "임대",
+    "rental_type": "행복주택",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
     "complex": "의왕청계3(국임)",
     "sido": "경기",
     "gu": "의왕시",
@@ -6438,7 +6542,7 @@
     "complex": "의정부민락2 A-1BL(브라운빌리지14단지)",
     "sido": "경기",
     "gu": "의정부시",
-    "households": 159,
+    "households": 153,
     "built_year": 2016,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -7075,7 +7179,7 @@
     "complex": "(NHF제10호)평택고덕국제도시 A-10블럭 공공임대",
     "sido": "경기",
     "gu": "평택시",
-    "households": 546,
+    "households": 510,
     "built_year": 2019,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -7491,7 +7595,7 @@
     "complex": "(NHF제4호)하남미사A4",
     "sido": "경기",
     "gu": "하남시",
-    "households": 695,
+    "households": 687,
     "built_year": 2018,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -7517,7 +7621,7 @@
     "complex": "미사강변 A29블록 10년 공임리츠",
     "sido": "경기",
     "gu": "하남시",
-    "households": 875,
+    "households": 863,
     "built_year": 2017,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -7530,7 +7634,7 @@
     "complex": "미사강변도시 A12블록(분납)",
     "sido": "경기",
     "gu": "하남시",
-    "households": 20,
+    "households": 15,
     "built_year": 2015,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -7543,7 +7647,7 @@
     "complex": "미사강변도시 A16블록(분납)",
     "sido": "경기",
     "gu": "하남시",
-    "households": 25,
+    "households": 22,
     "built_year": 2015,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -7556,7 +7660,7 @@
     "complex": "미사강변도시 A24블록 10년 공임리츠",
     "sido": "경기",
     "gu": "하남시",
-    "households": 590,
+    "households": 583,
     "built_year": 2018,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -7569,7 +7673,7 @@
     "complex": "미사강변도시 A25블록 10년 공임리츠",
     "sido": "경기",
     "gu": "하남시",
-    "households": 625,
+    "households": 597,
     "built_year": 2018,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -7595,7 +7699,7 @@
     "complex": "하남감일 1단지(10년공임)A1블록",
     "sido": "경기",
     "gu": "하남시",
-    "households": 669,
+    "households": 640,
     "built_year": 2020,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -7816,7 +7920,7 @@
     "complex": "(NHF제3호)화성동탄2 A50블럭(22단지 르파비스)",
     "sido": "경기",
     "gu": "화성시",
-    "households": 407,
+    "households": 400,
     "built_year": 2017,
     "tenure": "임대",
     "rental_type": "공공임대",
