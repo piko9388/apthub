@@ -1,4 +1,6 @@
 """파이프라인 단위 테스트. 실행: PYTHONPATH=src python3 -m pytest -q (또는 이 파일 직접 실행)."""
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -167,3 +169,47 @@ if __name__ == "__main__":
             traceback.print_exc()
     print(f"\n{passed}/{len(fns)} passed")
     raise SystemExit(0 if passed == len(fns) else 1)
+
+
+def test_region_detection_deterministic():
+    """지역 태깅은 PYTHONHASHSEED 와 무관하게 같은 결과를 내야 한다.
+
+    회귀 배경: detect_regions 가 매칭 구를 set 에 담고 list(set) 로 꺼내
+    region[0] 이 문자열 해시 순서에 좌우됐다. 동일 입력 재빌드에서 66건의
+    gu 가 바뀌어, 지역 드릴다운 카운트·지도 마커가 빌드마다 흔들렸다.
+
+    해시 랜덤화는 프로세스마다 한 번 정해지므로 같은 프로세스 안에서 반복 호출해도
+    잡히지 않는다. PYTHONHASHSEED 를 달리한 서브프로세스로 비교해야 한다.
+    """
+    src = str(Path(__file__).resolve().parents[1] / "src")
+    code = (
+        "import sys; sys.path.insert(0, %r)\n"
+        "from apthub import filters\n"
+        "ts = ['평택 고덕동 파라곤 전용 42평 13억 신고가',\n"
+        "      '고양 일산서구 평당가 — 2026년 시세 추적',\n"
+        "      \"동작구 흑석·노량진, 동작 대장 입지 경쟁 부각\",\n"
+        "      '동탄·용인 주택 수요 자극 반도체 머니']\n"
+        "print([filters.detect_regions(t) for t in ts])\n" % src
+    )
+    outs = set()
+    for seed in ("0", "1", "42", "12345"):
+        env = dict(os.environ, PYTHONHASHSEED=seed)
+        outs.add(subprocess.run([sys.executable, "-c", code], env=env,
+                                capture_output=True, text=True, check=True).stdout)
+    assert len(outs) == 1, f"해시시드에 따라 지역 태깅이 달라짐: {outs}"
+
+
+def test_region_detection_prefers_subject():
+    """본문에 먼저 나온(=제목의) 지명이 대표 지역이 된다.
+
+    _text 는 "제목\\n요약" 순서라 위치가 작을수록 기사 주제에 가깝다.
+    '평택 고덕동'이 서울 강동구로, '고양 일산서구'가 인천 서구로 가던 오태깅을 막는다.
+    """
+    sido, regions = filters.detect_regions("평택 고덕동 파라곤 전용 42평 13억 신고가")
+    assert sido == "경기" and regions[0] == "평택시"
+
+    sido, regions = filters.detect_regions("고양 일산서구 평당가 — 2026년 시세 추적")
+    assert sido == "경기" and regions[0] == "고양시"
+
+    sido, regions = filters.detect_regions("동작구 흑석·노량진, 동작 대장 입지 경쟁 부각")
+    assert sido == "서울" and regions[0] == "동작구"

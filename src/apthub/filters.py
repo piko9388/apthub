@@ -55,21 +55,40 @@ def detect_regions(text: str) -> tuple[str | None, list[str]]:
                 toks.append((nm.lower(), sido, district))
     toks.sort(key=lambda t: -len(t[0]))
     work = low
-    matched: dict[str, set] = {}
+    # 매칭 결과를 set 에 담으면 list(set) 순서가 문자열 해시(PYTHONHASHSEED)에
+    # 좌우돼 gu·sido 가 빌드마다 바뀐다(실측: 동일 입력 재빌드에 66건 변동).
+    # 리스트로 모으고 '본문 등장 위치'로 정렬해 결정적이면서 주제에 맞게 고른다.
+    # _text 가 "제목\n요약" 순서라 위치가 작을수록 제목 = 기사 주제에 가깝다.
+    BIG = len(low) + 1
+    matched: dict[str, list] = {}               # sido -> [(pos, -토큰길이, 구)]
     for nm, sido, district in toks:
         if nm and nm in work:
-            matched.setdefault(sido, set()).add(district)
-            work = work.replace(nm, "·")        # 소거
+            pos = low.find(nm)                  # 소거 전 원문 기준 위치
+            matched.setdefault(sido, []).append(
+                (pos if pos >= 0 else BIG, -len(nm), district))
+            work = work.replace(nm, "·")        # 소거(동명이구 부분문자열 오태깅 방지)
     alias_hit = {sido: 1 for sido, spec in config.regions().items()
                  if any(a.lower() in low for a in spec["aliases"])}
-    sidos = set(matched) | set(alias_hit)
+    order = list(config.regions())
+    sidos = [s for s in order if s in matched or s in alias_hit]
     if not sidos:
         return None, []
-    # 점수: 구 매칭 2점 + 명시 시도명(alias) 3점 → '경기 OO시' 접두가 동률을 깬다
+
+    def districts(s):                           # 등장 순 → 긴 토큰 순, 중복 제거
+        return _dedup([d for _, _, d in sorted(matched.get(s, ()))])
+
+    def firstpos(s):
+        m = matched.get(s)
+        return min(p for p, _, _ in m) if m else BIG
+
+    # 점수: 구 매칭 2점 + 명시 시도명(alias) 3점 → '경기 OO시' 접두가 동률을 깬다.
+    # 동률이면 '본문에 먼저 나온 시도'가 이긴다(예: "평택 고덕동"은 경기, 서울 강동 아님).
+    # 그래도 같으면 설정 선언 순서 — 어떤 경우에도 결정적이다.
     def score(s):
-        return 2 * len(matched.get(s, set())) + 3 * alias_hit.get(s, 0)
-    best = max(sidos, key=score)
-    return best, _dedup(list(matched.get(best, [])))
+        return 2 * len(districts(s)) + 3 * alias_hit.get(s, 0)
+
+    best = max(sidos, key=lambda s: (score(s), -firstpos(s), -order.index(s)))
+    return best, districts(best)
 
 
 def detect_category(text: str) -> tuple[str | None, list[str]]:
