@@ -1,0 +1,72 @@
+[
+  {
+    "title": "2024년 9월 수도권 주택 매매 거래량 25,829건",
+    "source": "프리진경제(국토교통부 주택통계)",
+    "url": "https://www.freezine.co.kr/news/articleView.html?idxno=3683",
+    "date": "2024-09-30",
+    "summary": "2024년 9월 수도권 주택 매매 거래량 25,829건, 전월 대비 21.2% 감소·전년동월 대비 13.6% 증가.",
+    "category": "price",
+    "kind": "data",
+    "metric": "주택 매매 거래량",
+    "value": 25829,
+    "unit": "건",
+    "sido": "수도권",
+    "confidence": "언론"
+  },
+  {
+    "title": "2024년 9월 전국 미분양 66,776호",
+    "source": "프리진경제(국토교통부 주택통계)",
+    "url": "https://www.freezine.co.kr/news/articleView.html?idxno=3683",
+    "date": "2024-09-30",
+    "summary": "2024년 9월말 전국 미분양 66,776호로 전월(67,550호) 대비 1.1% 감소.",
+    "category": "price",
+    "kind": "data",
+    "metric": "미분양",
+    "value": 66776,
+    "unit": "호",
+    "sido": "전국",
+    "confidence": "언론"
+  },
+  {
+    "title": "2024년 9월 전국 주택 매매 거래량 51,267건",
+    "source": "프리진경제(국토교통부 주택통계)",
+    "url": "https://www.freezine.co.kr/news/articleView.html?idxno=3683",
+    "date": "2024-09-30",
+    "summary": "2024년 9월 신고일 기준 전국 주택 매매 거래량 51,267건, 전월 대비 15.5% 감소.",
+    "category": "price",
+    "kind": "data",
+    "metric": "주택 매매 거래량",
+    "value": 51267,
+    "unit": "건",
+    "sido": "전국",
+    "confidence": "언론"
+  },
+  {
+    "title": "2024년 9월 준공후 미분양 17,262호",
+    "source": "프리진경제(국토교통부 주택통계)",
+    "url": "https://www.freezine.co.kr/news/articleView.html?idxno=3683",
+    "date": "2024-09-30",
+    "summary": "2024년 9월말 준공후 미분양 17,262호로 전월 대비 4.9%(801호) 증가.",
+    "category": "price",
+    "kind": "data",
+    "metric": "준공후 미분양",
+    "value": 17262,
+    "unit": "호",
+    "sido": "전국",
+    "confidence": "언론"
+  },
+  {
+    "title": "서울 아파트 PIR 9.8 (2024.9)",
+    "source": "KB부동산",
+    "url": "https://data.kbland.kr/kbstats/pir",
+    "date": "2024-09-30",
+    "summary": "2024년 9월 서울 소득대비 주택가격비율(PIR) 9.8. 중위소득 가구 9.8년치 소득으로 중간가격 주택 매입 가능.",
+    "category": "price",
+    "kind": "data",
+    "metric": "PIR",
+    "value": 9.8,
+    "unit": "배",
+    "sido": "서울",
+    "confidence": "언론"
+  }
+]

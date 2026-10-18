@@ -1,0 +1,16 @@
+[
+  {
+    "title": "2024년 5월 서울 아파트 매매 거래량 약 5,182건",
+    "source": "차트앤그래프(한국부동산원 통계 재가공)",
+    "url": "https://chartngraph.com/%EC%84%9C%EC%9A%B8-%EC%95%84%ED%8C%8C%ED%8A%B8-%EA%B1%B0%EB%9E%98%EB%9F%89/",
+    "date": "2024-05-31",
+    "summary": "2024년 5월 서울 아파트 매매 약 5,182건.",
+    "category": "price",
+    "kind": "data",
+    "metric": "아파트 매매 거래량",
+    "value": 5182,
+    "unit": "건",
+    "sido": "서울",
+    "confidence": "추정"
+  }
+]

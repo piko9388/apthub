@@ -1,0 +1,59 @@
+[
+  {
+    "title": "2025년 5월 서울 주택시장 매매·전세 동반 과열",
+    "source": "데일리매거진",
+    "url": "https://dailymagazine.co.kr/news/newsview.php?ncode=1065540560818345",
+    "date": "2025-05-15",
+    "summary": "5월 서울 매매·전세 상승폭이 2개월 연속 확대되며 동반 과열, 성북·송파·광진 강세.",
+    "category": "price",
+    "kind": "news",
+    "confidence": "언론",
+    "comment": "월간동향 정성 보도."
+  },
+  {
+    "title": "6월부터 전월세신고제 본격 시행…실거래가 투명화",
+    "source": "대한민국 정책브리핑",
+    "url": "https://www.korea.kr/news/policyNewsView.do?newsId=148942511",
+    "date": "2025-05-15",
+    "summary": "4년 계도기간 종료로 6월부터 전월세신고제 본격 시행, 보증금 6000만원·월세 30만원 초과 계약은 30일 내 신고 의무.",
+    "category": "policy",
+    "comment": "임대차 거래 투명성 제고, 신고 부담도 증가."
+  },
+  {
+    "title": "집값 급등에 탈서울 107만명…서울·경기 격차 7억",
+    "source": "뉴스스페이스",
+    "url": "https://www.newsspace.kr/news/article.html?no=11583",
+    "date": "2025-05-15",
+    "summary": "서울 집값 급등으로 경기 이주 등 탈서울 인구가 늘고 서울·경기 아파트 평균가 격차가 7억원을 돌파.",
+    "category": "price",
+    "kind": "news",
+    "confidence": "언론"
+  },
+  {
+    "title": "전월세신고제 과태료 상한 100만→30만원 인하",
+    "source": "국토교통부",
+    "url": "https://www.molit.go.kr/USR/NEWS/m_71/dtl.jsp?id=95090898",
+    "date": "2025-05-16",
+    "summary": "계도기간 5월 31일 종료, 6월 1일 이후 계약부터 부과하되 지연신고 과태료 상한을 100만원에서 30만원으로 하향.",
+    "category": "policy",
+    "comment": "제재는 시작하되 과태료 부담은 완화."
+  },
+  {
+    "title": "강동구 강일동 고덕강일 대성베르힐 청약 경쟁률 97.4대 1",
+    "source": "뉴스1",
+    "url": "https://www.news1.kr/realestate/general/5804743",
+    "date": "2025-05-20",
+    "summary": "강동구 강일동 고덕강일 대성베르힐 1순위 청약에 3만명 넘게 몰리며 평균 경쟁률 97.4대 1을 기록했다.",
+    "category": "price",
+    "comment": "강일동 신규 분양에 대한 청약 수요가 강하다."
+  },
+  {
+    "title": "강동구 명일동 삼익그린2차 3353가구로 재건축, 정비구역 지정 고시",
+    "source": "네이트뉴스",
+    "url": "https://news.nate.com/view/20250523n18011",
+    "date": "2025-05-23",
+    "summary": "강동구 명일동 삼익그린2차가 최고 40층 3353가구로 재건축이 추진되며 정비계획 결정·정비구역 지정안이 고시됐고, 국민평형 분담금은 2억6000만원대로 추산됐다.",
+    "category": "price",
+    "comment": "명일동 재건축 본격화의 핵심 단지다."
+  }
+]

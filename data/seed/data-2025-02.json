@@ -1,0 +1,72 @@
+[
+  {
+    "kind": "data",
+    "title": "한국은행 기준금리 2.75%로 인하 (2025-02-25 금통위)",
+    "source": "한국은행",
+    "url": "https://www.bok.or.kr/portal/singl/baseRate/list.do?dataSeCd=01&menuNo=200643",
+    "date": "2025-02-25",
+    "summary": "2025년 2월 금통위 기준금리 3.00%→2.75% 0.25%p 인하",
+    "category": "macro",
+    "metric": "기준금리",
+    "value": 2.75,
+    "unit": "%",
+    "sido": "전국",
+    "confidence": "공식"
+  },
+  {
+    "title": "2025년 2월 서울 아파트 매매 거래량 4,743건",
+    "source": "글로벌이코노믹(국토교통부 주택통계)",
+    "url": "https://www.g-enews.com/article/Real-Estate/2025/04/202504290938446666fa4bb4fab2_1",
+    "date": "2025-02-28",
+    "summary": "2025년 2월 서울 아파트 매매 4,743건(3월 발표 전월치 기준).",
+    "category": "price",
+    "kind": "data",
+    "metric": "아파트 매매 거래량",
+    "value": 4743,
+    "unit": "건",
+    "sido": "서울",
+    "confidence": "언론"
+  },
+  {
+    "title": "2025년 2월 전국 미분양 70,061호",
+    "source": "글로벌이코노믹(국토교통부 주택통계)",
+    "url": "https://www.g-enews.com/article/Real-Estate/2025/04/202504290938446666fa4bb4fab2_1",
+    "date": "2025-02-28",
+    "summary": "2025년 2월말 전국 미분양 70,061호(3월 발표 전월치 기준).",
+    "category": "price",
+    "kind": "data",
+    "metric": "미분양",
+    "value": 70061,
+    "unit": "호",
+    "sido": "전국",
+    "confidence": "언론"
+  },
+  {
+    "title": "2025년 2월 전국 주택 매매 거래량 50,698건",
+    "source": "글로벌이코노믹(국토교통부 주택통계)",
+    "url": "https://www.g-enews.com/article/Real-Estate/2025/04/202504290938446666fa4bb4fab2_1",
+    "date": "2025-02-28",
+    "summary": "2025년 2월 전국 주택 매매 거래량 50,698건(3월 발표 전월치 기준).",
+    "category": "price",
+    "kind": "data",
+    "metric": "주택 매매 거래량",
+    "value": 50698,
+    "unit": "건",
+    "sido": "전국",
+    "confidence": "언론"
+  },
+  {
+    "title": "은행권 가계대출 +3.5조원 (2025.2)",
+    "source": "금융위원회",
+    "url": "https://www.fsc.go.kr/po010101/84129",
+    "date": "2025-02-28",
+    "summary": "2025년 2월 은행권 가계대출 +3.5조원(전 금융권 +4.3조). 연초 취급 재개·신학기 이사수요.",
+    "category": "macro",
+    "kind": "data",
+    "metric": "가계대출 증감",
+    "value": 3.5,
+    "unit": "조원",
+    "sido": "전국",
+    "confidence": "공식"
+  }
+]

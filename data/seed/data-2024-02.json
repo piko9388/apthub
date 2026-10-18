@@ -1,0 +1,17 @@
+[
+  {
+    "title": "2024년 2월 서울 아파트 매매가격지수 변동률 -0.14%",
+    "source": "비즈워치",
+    "url": "https://news.bizwatch.co.kr/article/real_estate/2024/03/15/0029",
+    "date": "2024-02-29",
+    "summary": "2024년 2월 서울 아파트 매매가격지수는 전월대비 -0.14%로 전월(-0.17%) 대비 하락폭 축소.",
+    "category": "price",
+    "kind": "data",
+    "metric": "매매가격지수 변동률",
+    "value": -0.14,
+    "unit": "%",
+    "sido": "서울",
+    "confidence": "언론",
+    "comment": "아파트 기준, 월간 전월대비."
+  }
+]
