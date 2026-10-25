@@ -29,7 +29,7 @@
     "complex": "서울강남 A5BL(10년,분납)",
     "sido": "서울",
     "gu": "강남구",
-    "households": 32,
+    "households": 31,
     "built_year": null,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -1313,6 +1313,19 @@
     ]
   },
   {
+    "complex": "인천부평(도시재생뉴딜) 행복주택",
+    "sido": "인천",
+    "gu": "부평구",
+    "households": 350,
+    "built_year": 2028,
+    "tenure": "임대",
+    "rental_type": "행복주택",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
     "complex": "인천부평1",
     "sido": "인천",
     "gu": "부평구",
@@ -2551,7 +2564,7 @@
     "complex": "군포당동2 S-1",
     "sido": "경기",
     "gu": "군포시",
-    "households": 10,
+    "households": 6,
     "built_year": 2014,
     "tenure": "임대",
     "rental_type": "공공임대",
