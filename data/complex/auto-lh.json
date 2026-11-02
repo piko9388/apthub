@@ -2366,6 +2366,19 @@
     ]
   },
   {
+    "complex": "과천지식정보타운 S12블록 행복주택",
+    "sido": "경기",
+    "gu": "과천시",
+    "households": 1424,
+    "built_year": 2027,
+    "tenure": "임대",
+    "rental_type": "행복주택",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
     "complex": "광명너부대 국민임대주택",
     "sido": "경기",
     "gu": "광명시",
@@ -2522,6 +2535,19 @@
     ]
   },
   {
+    "complex": "구리갈매역세권 A-1BL 신혼희망타운 행복주택",
+    "sido": "경기",
+    "gu": "구리시",
+    "households": 609,
+    "built_year": 2028,
+    "tenure": "임대",
+    "rental_type": "행복주택",
+    "dev": "LH 공공임대",
+    "source_urls": [
+      "https://apis.data.go.kr/B552555/lhLeaseInfo1/lhLeaseInfo1"
+    ]
+  },
+  {
     "complex": "구리수택 행복주택",
     "sido": "경기",
     "gu": "구리시",
@@ -2551,7 +2577,7 @@
     "complex": "군포당동2 A-3",
     "sido": "경기",
     "gu": "군포시",
-    "households": 10,
+    "households": 9,
     "built_year": 2014,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -5736,7 +5762,7 @@
     "complex": "오산세교 12단지(B-4블럭 서희스타힐스)",
     "sido": "경기",
     "gu": "오산시",
-    "households": 17,
+    "households": 15,
     "built_year": 2011,
     "tenure": "임대",
     "rental_type": "공공임대",
@@ -5801,7 +5827,7 @@
     "complex": "오산세교 5단지(B-2블럭 센트럴파크)",
     "sido": "경기",
     "gu": "오산시",
-    "households": 5,
+    "households": 3,
     "built_year": 2009,
     "tenure": "임대",
     "rental_type": "공공임대",
