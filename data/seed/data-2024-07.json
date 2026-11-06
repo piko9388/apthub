@@ -1,0 +1,30 @@
+[
+  {
+    "title": "2024년 7월 전국 미분양 71,822호",
+    "source": "국토교통부 주택통계(2024년 7월)",
+    "url": "https://www.molit.go.kr/USR/NEWS/m_71/dtl.jsp?lcmspage=1&id=95090135",
+    "date": "2024-07-31",
+    "summary": "2024년 7월말 전국 미분양 71,822호로 전월 대비 3.0% 감소.",
+    "category": "price",
+    "kind": "data",
+    "metric": "미분양",
+    "value": 71822,
+    "unit": "호",
+    "sido": "전국",
+    "confidence": "공식"
+  },
+  {
+    "title": "은행권 가계대출 +5.4조원 (2024.7)",
+    "source": "금융위원회",
+    "url": "https://www.fsc.go.kr/no010101/83063",
+    "date": "2024-07-31",
+    "summary": "2024년 7월 은행권 가계대출 +5.4조원 증가, 수도권 주담대 확대.",
+    "category": "macro",
+    "kind": "data",
+    "metric": "가계대출 증감",
+    "value": 5.4,
+    "unit": "조원",
+    "sido": "전국",
+    "confidence": "공식"
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "title": "신규취급액기준 COFIX 3.35% (2024.11)",
+    "source": "전국은행연합회",
+    "url": "https://portal.kfb.or.kr/fingoods/cofix.php",
+    "date": "2024-11-15",
+    "summary": "2024년 11월 기준 신규취급액기준 COFIX 3.35%. 이후 기준금리 인하로 하락세 전환.",
+    "category": "macro",
+    "kind": "data",
+    "metric": "COFIX",
+    "value": 3.35,
+    "unit": "%",
+    "sido": "전국",
+    "confidence": "공식"
+  },
+  {
+    "title": "한국은행 기준금리 3.00%로 추가 인하 (2024.11)",
+    "source": "한국은행",
+    "url": "https://www.bok.or.kr/portal/singl/baseRate/list.do?dataSeCd=01&menuNo=200643",
+    "date": "2024-11-28",
+    "summary": "금통위 연속 인하로 기준금리 3.25%→3.00%로 0.25%p 추가 인하.",
+    "category": "macro",
+    "kind": "data",
+    "metric": "기준금리",
+    "value": 3,
+    "unit": "%",
+    "sido": "전국",
+    "confidence": "공식"
+  }
+]

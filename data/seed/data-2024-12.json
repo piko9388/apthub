@@ -1,0 +1,72 @@
+[
+  {
+    "title": "2024년 서울 아파트 입주물량 27,877가구",
+    "source": "부동산R114",
+    "url": "https://www.r114.com/?_c=Research&_m=Detail&bno=200&num=8113",
+    "date": "2024-12-31",
+    "summary": "2024년 서울 아파트 입주물량 27,877가구(월 미정단지 제외 기준).",
+    "category": "price",
+    "kind": "data",
+    "metric": "입주물량",
+    "value": 27877,
+    "unit": "가구",
+    "sido": "서울",
+    "confidence": "언론"
+  },
+  {
+    "title": "2024년 전국 아파트 입주물량 364,058가구",
+    "source": "부동산R114",
+    "url": "https://www.r114.com/?_c=Research&_m=Detail&bno=200&num=8113",
+    "date": "2024-12-31",
+    "summary": "2024년 전국 아파트 입주예정 물량 364,058가구.",
+    "category": "price",
+    "kind": "data",
+    "metric": "입주물량",
+    "value": 364058,
+    "unit": "가구",
+    "sido": "전국",
+    "confidence": "언론"
+  },
+  {
+    "title": "2024년말 전국 미분양 70,173호",
+    "source": "KDI 경제정보센터(국토교통부 주택통계)",
+    "url": "https://eiec.kdi.re.kr/policy/materialView.do?num=262923",
+    "date": "2024-12-31",
+    "summary": "2024년 12월말 전국 미분양 70,173호로 2024년 말 기준 7만호 돌파(경기 10,128호 최다).",
+    "category": "price",
+    "kind": "data",
+    "metric": "미분양",
+    "value": 70173,
+    "unit": "호",
+    "sido": "전국",
+    "confidence": "공식"
+  },
+  {
+    "kind": "data",
+    "title": "서울 PIR 11.3배 (2024-4분기·KB)",
+    "source": "KB부동산 데이터허브 PIR",
+    "url": "https://www.sedaily.com/NewsView/2GVJUBTPEK",
+    "date": "2024-12-31",
+    "summary": "2024년 4분기 KB 서울 PIR 11.3.",
+    "category": "price",
+    "metric": "PIR",
+    "value": 11.3,
+    "unit": "배",
+    "sido": "서울",
+    "confidence": "공식"
+  },
+  {
+    "kind": "data",
+    "title": "전국 PIR 11.3배 (2024-4분기)",
+    "source": "KB부동산 데이터허브 PIR",
+    "url": "https://www.sedaily.com/NewsView/2GVJUBTPEK",
+    "date": "2024-12-31",
+    "summary": "2024년 4분기 전국 PIR 11.3, 연소득 7571만원 기준.",
+    "category": "price",
+    "metric": "PIR",
+    "value": 11.3,
+    "unit": "배",
+    "sido": "전국",
+    "confidence": "공식"
+  }
+]

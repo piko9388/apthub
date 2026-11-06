@@ -1,0 +1,44 @@
+[
+  {
+    "title": "2024년 6월 서울 아파트 매매 거래량 약 6,150건",
+    "source": "차트앤그래프(한국부동산원 통계 재가공)",
+    "url": "https://chartngraph.com/%EC%84%9C%EC%9A%B8-%EC%95%84%ED%8C%8C%ED%8A%B8-%EA%B1%B0%EB%9E%98%EB%9F%89/",
+    "date": "2024-06-30",
+    "summary": "2024년 6월 서울 아파트 매매 약 6,150건(상반기 누계 24,775건).",
+    "category": "price",
+    "kind": "data",
+    "metric": "아파트 매매 거래량",
+    "value": 6150,
+    "unit": "건",
+    "sido": "서울",
+    "confidence": "추정"
+  },
+  {
+    "title": "2024년 6월 전국 미분양 74,037호",
+    "source": "이코노믹데일리(국토교통부 주택통계)",
+    "url": "https://www.economidaily.com/view/20240731103832507",
+    "date": "2024-06-30",
+    "summary": "2024년 6월말 전국 미분양 74,037호로 전월 대비 1,908호(2.6%) 증가.",
+    "category": "price",
+    "kind": "data",
+    "metric": "미분양",
+    "value": 74037,
+    "unit": "호",
+    "sido": "전국",
+    "confidence": "언론"
+  },
+  {
+    "title": "서울 아파트 PIR 약 10.26 (2024.6)",
+    "source": "KB부동산/뉴스스페이스",
+    "url": "https://www.newsspace.kr/news/article.html?no=4664",
+    "date": "2024-06-30",
+    "summary": "2024년 상반기 서울 PIR 10.2 안팎(1월 10.18, 6월 10.26)에서 등락하며 높은 수준 유지.",
+    "category": "price",
+    "kind": "data",
+    "metric": "PIR",
+    "value": 10.26,
+    "unit": "배",
+    "sido": "서울",
+    "confidence": "추정"
+  }
+]

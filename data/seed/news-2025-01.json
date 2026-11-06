@@ -1,0 +1,31 @@
+[
+  {
+    "title": "2025년 전국 아파트 입주물량 26만가구로 급감",
+    "source": "부동산R114",
+    "url": "https://www.r114.com/?_c=Research&_m=Detail&bno=200&num=8113",
+    "date": "2025-01-02",
+    "summary": "2025년 전국 아파트 입주예정 물량이 263,330가구로 2024년(364,058가구) 대비 28% 감소, 2014년 이후 최저 수준으로 공급 절벽 우려.",
+    "category": "macro",
+    "kind": "news"
+  },
+  {
+    "title": "2024년 가계대출 +41.6조…안정적 관리",
+    "source": "일간NTN",
+    "url": "https://www.intn.co.kr/news/articleView.html?idxno=2041211",
+    "date": "2025-01-15",
+    "summary": "금융당국, 2024년 전 금융권 가계대출 +41.6조원(전년말 대비 +2.6%) 증가로 안정적 관리 평가.",
+    "category": "macro",
+    "kind": "news",
+    "confidence": "언론"
+  },
+  {
+    "title": "월급 9.8년 모아야 서울 내 집 마련",
+    "source": "세계일보",
+    "url": "https://www.segye.com/newsView/20250128502797",
+    "date": "2025-01-28",
+    "summary": "KB PIR 기준 서울 아파트는 소득 9.8년치, 전세는 5.5년치를 모아야 마련 가능한 것으로 조사.",
+    "category": "price",
+    "kind": "news",
+    "confidence": "언론"
+  }
+]

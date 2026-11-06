@@ -1,0 +1,58 @@
+[
+  {
+    "kind": "data",
+    "title": "경기 아파트 입주물량 67,115가구 (2026·부동산R114)",
+    "source": "부동산R114",
+    "url": "https://www.ebn.co.kr/news/articleView.html?idxno=1700809",
+    "date": "2026-12-31",
+    "summary": "2026년 경기 아파트 입주예정물량(임대 포함) 67,115가구, 2025년 대비 약 10% 감소",
+    "category": "price",
+    "metric": "입주물량",
+    "value": 67115,
+    "unit": "가구",
+    "sido": "경기",
+    "confidence": "언론"
+  },
+  {
+    "kind": "data",
+    "title": "서울 아파트 입주물량 27,620가구 (2026·부동산R114)",
+    "source": "부동산R114",
+    "url": "https://www.ebn.co.kr/news/articleView.html?idxno=1700809",
+    "date": "2026-12-31",
+    "summary": "2026년 서울 아파트 입주예정물량(임대 포함) 27,620가구, 2025년 대비 약 26% 감소",
+    "category": "price",
+    "metric": "입주물량",
+    "value": 27620,
+    "unit": "가구",
+    "sido": "서울",
+    "confidence": "언론"
+  },
+  {
+    "kind": "data",
+    "title": "수도권 아파트 입주물량 112,064가구 (2026·부동산R114)",
+    "source": "부동산R114",
+    "url": "https://www.ebn.co.kr/news/articleView.html?idxno=1700809",
+    "date": "2026-12-31",
+    "summary": "2026년 수도권 아파트 입주예정물량(임대 포함) 112,064가구, 2025년 대비 약 15% 감소",
+    "category": "price",
+    "metric": "입주물량",
+    "value": 112064,
+    "unit": "가구",
+    "sido": "수도권",
+    "confidence": "언론"
+  },
+  {
+    "kind": "data",
+    "title": "인천 아파트 입주물량 17,329가구 (2026·부동산R114)",
+    "source": "부동산R114",
+    "url": "https://www.ebn.co.kr/news/articleView.html?idxno=1700809",
+    "date": "2026-12-31",
+    "summary": "2026년 인천 아파트 입주예정물량(임대 포함) 17,329가구, 2025년 대비 약 14% 감소",
+    "category": "price",
+    "metric": "입주물량",
+    "value": 17329,
+    "unit": "가구",
+    "sido": "인천",
+    "confidence": "언론"
+  }
+]

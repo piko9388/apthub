@@ -1,0 +1,59 @@
+[
+  {
+    "title": "2024년 3월 미분양주택 64,964호",
+    "source": "KDI 경제정보센터(국토교통부 주택통계)",
+    "url": "https://eiec.kdi.re.kr/policy/materialView.do?num=250938",
+    "date": "2024-03-31",
+    "summary": "2024년 3월말 기준 전국 미분양 64,964호로 전월 대비 0.1% 증가.",
+    "category": "price",
+    "kind": "data",
+    "metric": "미분양",
+    "value": 64964,
+    "unit": "호",
+    "sido": "전국",
+    "confidence": "공식",
+    "comment": "신고일 기준 국토부 월간 주택통계"
+  },
+  {
+    "title": "2024년 3월 서울 아파트 매매 거래량 약 6,098건",
+    "source": "차트앤그래프(한국부동산원 통계 재가공)",
+    "url": "https://chartngraph.com/%EC%84%9C%EC%9A%B8-%EC%95%84%ED%8C%8C%ED%8A%B8-%EA%B1%B0%EB%9E%98%EB%9F%89/",
+    "date": "2024-03-31",
+    "summary": "2024년 3월 서울 아파트 매매 약 6,098건.",
+    "category": "price",
+    "kind": "data",
+    "metric": "아파트 매매 거래량",
+    "value": 6098,
+    "unit": "건",
+    "sido": "서울",
+    "confidence": "추정"
+  },
+  {
+    "title": "2024년 3월 전국 주택 매매 거래량 52,816건",
+    "source": "KDI 경제정보센터(국토교통부 주택통계)",
+    "url": "https://eiec.kdi.re.kr/policy/materialView.do?num=250938",
+    "date": "2024-03-31",
+    "summary": "2024년 3월 신고일 기준 전국 주택 매매 거래량 52,816건, 전월 대비 21.4% 증가.",
+    "category": "price",
+    "kind": "data",
+    "metric": "주택 매매 거래량",
+    "value": 52816,
+    "unit": "건",
+    "sido": "전국",
+    "confidence": "공식"
+  },
+  {
+    "title": "2024년 3월 준공후 미분양 12,194호",
+    "source": "KDI 경제정보센터(국토교통부 주택통계)",
+    "url": "https://eiec.kdi.re.kr/policy/materialView.do?num=250938",
+    "date": "2024-03-31",
+    "summary": "2024년 3월말 준공후 미분양 12,194호로 전월 대비 2.8% 증가.",
+    "category": "price",
+    "kind": "data",
+    "metric": "준공후 미분양",
+    "value": 12194,
+    "unit": "호",
+    "sido": "전국",
+    "confidence": "공식"
+  }
+]
